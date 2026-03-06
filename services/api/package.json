@@ -1,0 +1,14 @@
+{
+  "name": "colegios-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
+  }
+}

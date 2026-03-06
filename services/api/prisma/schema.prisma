@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+
+  users     User[]
+  templates Template[]
+  requests  Request[]
+  credits   OrgCredit?
+}
+
+model User {
+  id                  String   @id @default(cuid())
+  organizationId      String?
+  role                String
+  email               String   @unique
+  passwordHash        String
+  mustChangePassword  Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+}
+
+model Template {
+  id             String   @id @default(cuid())
+  organizationId String
+  type           String
+  pdfPath        String
+  signX          Int
+  signY          Int
+  signPage       Int
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  requests     Request[]
+}
+
+model Request {
+  id             String   @id @default(cuid())
+  organizationId String
+  templateId     String
+  omniId         String?
+  status         String   @default("PENDING")
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  template     Template     @relation(fields: [templateId], references: [id])
+  signatories  Signatory[]
+  events       RequestEvent[]
+}
+
+model Signatory {
+  id             String   @id @default(cuid())
+  requestId      String
+  idNumber       String
+  fullName       String
+  phone          String
+  email          String
+  sanitizedPhone String
+  createdAt      DateTime @default(now())
+
+  request Request @relation(fields: [requestId], references: [id])
+}
+
+model RequestEvent {
+  id        String   @id @default(cuid())
+  requestId String
+  status    String
+  metaJson  Json?
+  createdAt DateTime @default(now())
+
+  request Request @relation(fields: [requestId], references: [id])
+}
+
+model OrgCredit {
+  organizationId String  @id
+  balance        Int     @default(0)
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+}

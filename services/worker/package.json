@@ -1,0 +1,9 @@
+{
+  "name": "colegios-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  }
+}
