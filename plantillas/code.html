@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Super Admin - Gestión de Instituciones</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#197fe6",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111921",
+                        "slate-50": "#f8fafc",
+                        "slate-100": "#f1f5f9",
+                        "slate-200": "#e2e8f0",
+                        "slate-300": "#cbd5e1",
+                        "slate-400": "#94a3b8",
+                        "slate-500": "#64748b",
+                        "slate-600": "#475569",
+                        "slate-700": "#334155",
+                        "slate-800": "#1e293b",
+                        "slate-900": "#0f172a",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="flex h-screen overflow-hidden">
+<!-- Sidebar -->
+<aside class="w-64 flex-shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+<div class="p-4 flex flex-col gap-6">
+<!-- Branding -->
+<div class="flex items-center gap-3">
+<div class="bg-primary/10 text-primary p-2 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined">school</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-slate-900 dark:text-white text-base font-bold leading-tight">FirmaEduca</h1>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-medium">SuperAdmin</p>
+</div>
+</div>
+<!-- Navigation -->
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary dark:bg-primary/20" href="#">
+<span class="material-symbols-outlined text-[20px]">domain</span>
+<span class="text-sm font-bold">Instituciones</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">bar_chart</span>
+<span class="text-sm font-medium">Reportes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="text-sm font-medium">Configuración</span>
+</a>
+</nav>
+</div>
+<div class="p-4 border-t border-slate-200 dark:border-slate-800">
+<button class="w-full flex items-center justify-center gap-2 py-2 px-4 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>Añadir Institución</span>
+</button>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col h-full overflow-hidden bg-background-light dark:bg-background-dark">
+<!-- Header -->
+<header class="h-16 flex-shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<h2 class="text-xl font-bold text-slate-900 dark:text-white">Gestión de Instituciones</h2>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-2 px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span>Exportar</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm">
+                        SA
+                    </div>
+</div>
+</header>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-auto p-6">
+<div class="max-w-7xl mx-auto flex flex-col gap-6">
+<!-- Metrics Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-1">
+<div class="flex justify-between items-start">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Firmas Procesadas Totales</p>
+<span class="material-symbols-outlined text-primary text-xl">draw</span>
+</div>
+<p class="text-slate-900 dark:text-white text-3xl font-bold mt-2">145,230</p>
+<p class="text-green-600 text-sm font-medium flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+                                +15% este mes
+                            </p>
+</div>
+<div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-1">
+<div class="flex justify-between items-start">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Instituciones Activas</p>
+<span class="material-symbols-outlined text-primary text-xl">account_balance</span>
+</div>
+<p class="text-slate-900 dark:text-white text-3xl font-bold mt-2">14</p>
+<p class="text-green-600 text-sm font-medium flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+                                +2% este mes
+                            </p>
+</div>
+<div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-1">
+<div class="flex justify-between items-start">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Ingresos Estimados (USD)</p>
+<span class="material-symbols-outlined text-primary text-xl">payments</span>
+</div>
+<p class="text-slate-900 dark:text-white text-3xl font-bold mt-2">$12,500</p>
+<p class="text-red-500 text-sm font-medium flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[16px]">trending_down</span>
+                                -1% este mes
+                            </p>
+</div>
+</div>
+<!-- Search & Filter -->
+<div class="flex items-center gap-3">
+<div class="relative flex-1 max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary placeholder:text-slate-400 transition-all" placeholder="Buscar por nombre o RUC..." type="text"/>
+</div>
+<button class="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                            Filtros
+                        </button>
+</div>
+<!-- Table -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm @container">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Institución</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden @md:table-cell">RUC</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Estado</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Saldo Créditos</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
+                                                    USFQ
+                                                </div>
+<span class="text-sm font-medium text-slate-900 dark:text-white">Universidad San Francisco de Quito</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 hidden @md:table-cell">1760001040001</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                                Activo
+                                            </span>
+</td>
+<td class="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white text-right">2,500</td>
+<td class="px-6 py-4 text-center">
+<button class="text-primary hover:text-primary/80 text-sm font-bold flex items-center justify-center gap-1 mx-auto transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+                                                Recargar
+                                            </button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs">
+                                                    PUCE
+                                                </div>
+<span class="text-sm font-medium text-slate-900 dark:text-white">Pontificia Universidad Católica</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 hidden @md:table-cell">1790013913001</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                                Activo
+                                            </span>
+</td>
+<td class="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white text-right">850</td>
+<td class="px-6 py-4 text-center">
+<button class="text-primary hover:text-primary/80 text-sm font-bold flex items-center justify-center gap-1 mx-auto transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+                                                Recargar
+                                            </button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs">
+                                                    EPN
+                                                </div>
+<span class="text-sm font-medium text-slate-900 dark:text-white">Escuela Politécnica Nacional</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 hidden @md:table-cell">1760005620001</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                                Activo
+                                            </span>
+</td>
+<td class="px-6 py-4 text-sm font-semibold text-slate-900 dark:text-white text-right">12,000</td>
+<td class="px-6 py-4 text-center">
+<button class="text-primary hover:text-primary/80 text-sm font-bold flex items-center justify-center gap-1 mx-auto transition-colors">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+                                                Recargar
+                                            </button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group opacity-75">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-xs dark:bg-slate-700 dark:text-slate-300">
+                                                    UDLA
+                                                </div>
+<span class="text-sm font-medium text-slate-900 dark:text-white">Universidad de las Américas</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 hidden @md:table-cell">1791225888001</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400">
+                                                Inactivo
+                                            </span>
+</td>
+<td class="px-6 py-4 text-sm font-semibold text-slate-500 dark:text-slate-500 text-right">0</td>
+<td class="px-6 py-4 text-center">
+<button class="text-slate-400 hover:text-primary transition-colors text-sm font-bold flex items-center justify-center gap-1 mx-auto">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+                                                Recargar
+                                            </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 bg-slate-50/50 dark:bg-slate-800/30">
+<span>Mostrando 1 a 4 de 14 instituciones</span>
+<div class="flex items-center gap-2">
+<button class="px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50" disabled="">Anterior</button>
+<button class="px-2 py-1 rounded bg-primary text-white font-medium">1</button>
+<button class="px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700">2</button>
+<button class="px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700">3</button>
+<button class="px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700">Siguiente</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

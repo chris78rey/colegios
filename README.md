@@ -4,6 +4,11 @@ Base de trabajo para la plataforma multi-tenant de firmas para instituciones edu
 
 Contenido
 - mvp_plan.md: plan completo del MVP.
-- docker-compose.yml: orquestación local (api, worker, postgres, redis).
-- scripts/healthcheck.sh: verificación rápida de servicios.
-- docs/architecture.md: notas de arquitectura mínima.
+- docker-compose.yml: orquestacion local (api, worker, postgres, redis).
+- scripts/healthcheck.sh: verificacion rapida de servicios.
+- docs/architecture.md: notas de arquitectura minima.
+
+UI estatica (login)
+- Archivo: `web/index.html`
+- Vista rapida (opcion 1): `python -m http.server 5173 --directory web`
+- Vista rapida (opcion 2): `npx serve web`

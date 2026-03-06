@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Panel de Control Institucional</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#197fe6",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111921",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Header -->
+<header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
+<div class="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
+<!-- Logo & Title -->
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">school</span>
+</div>
+<h1 class="text-xl font-bold tracking-tight">Firma Educativa</h1>
+</div>
+<!-- Navigation -->
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-primary font-semibold text-sm" href="#">Dashboard</a>
+<a class="text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 font-medium text-sm transition-colors" href="#">Solicitudes</a>
+<a class="text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 font-medium text-sm transition-colors" href="#">Reportes</a>
+<a class="text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 font-medium text-sm transition-colors" href="#">Configuración</a>
+</nav>
+<!-- Actions & Profile -->
+<div class="flex items-center gap-4">
+<div class="hidden lg:flex gap-3">
+<button class="flex items-center justify-center gap-2 h-9 px-4 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span class="truncate">Reporte PDF</span>
+</button>
+<button class="flex items-center justify-center gap-2 h-9 px-4 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">upload_file</span>
+<span class="truncate">Nueva Carga Masiva</span>
+</button>
+</div>
+<div class="h-8 w-px bg-slate-200 dark:bg-slate-700 hidden lg:block mx-2"></div>
+<div class="w-9 h-9 rounded-full bg-slate-200 bg-cover bg-center border border-slate-200 dark:border-slate-700 cursor-pointer" data-alt="Fotografía de perfil de administrador" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDfjO7dmA1O9PFxKKPpFP0b4WTLmpFvePWf9esSY2iOsuDt6CK9VDSe8voVI_KfP4ldF8115k8ZfmRgQ8OustFBhBD_DyLT6oltqYwBdo6PkEAh_uijXAHvAl5KGYk1VuMtaeiuvC2k8nZxbwjWJaZnDNzUam3xVgfsTIJ0_zYIwbt967GYjguE-Zan1TIwvQnza3MRQSstVhNk8H5osbw_0wx6c3w0ub4-QFVZdwrEuAlbg0bO7MoSRtDosVRu3J_F29JgrIw-pbJP');">
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 max-w-[1200px] w-full mx-auto px-6 py-8 flex flex-col gap-8">
+<!-- Header Section -->
+<div>
+<h2 class="text-3xl font-bold tracking-tight">Resumen de Institución</h2>
+<p class="text-slate-500 dark:text-slate-400 mt-1">Métricas de firmas y solicitudes correspondientes al mes actual.</p>
+</div>
+<!-- Alert Banner -->
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-900/50">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-amber-600 dark:text-amber-500 mt-0.5">warning</span>
+<div>
+<h3 class="text-amber-900 dark:text-amber-400 font-bold text-sm">¡Atención! Créditos bajos</h3>
+<p class="text-amber-700 dark:text-amber-500/80 text-sm mt-0.5">Te quedan pocos créditos para firmas este mes. Por favor recarga pronto para evitar interrupciones.</p>
+</div>
+</div>
+<button class="flex-shrink-0 flex items-center justify-center h-9 px-4 rounded-lg bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 transition-colors shadow-sm w-full sm:w-auto">
+                Recargar Créditos
+            </button>
+</div>
+<!-- Stats Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Stat Card 1 -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Solicitudes del mes</p>
+<span class="material-symbols-outlined text-slate-400 text-xl">description</span>
+</div>
+<div class="flex items-baseline gap-2 mt-1">
+<p class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">1,250</p>
+<p class="text-green-600 dark:text-green-500 text-sm font-semibold flex items-center">
+<span class="material-symbols-outlined text-[16px]">arrow_upward</span> 15%
+                    </p>
+</div>
+</div>
+<!-- Stat Card 2 -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Tasa de éxito</p>
+<span class="material-symbols-outlined text-slate-400 text-xl">verified</span>
+</div>
+<div class="flex items-baseline gap-2 mt-1">
+<p class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">92%</p>
+<p class="text-green-600 dark:text-green-500 text-sm font-semibold flex items-center">
+<span class="material-symbols-outlined text-[16px]">arrow_upward</span> 2%
+                    </p>
+</div>
+</div>
+<!-- Stat Card 3 -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm flex flex-col gap-2 relative overflow-hidden">
+<div class="absolute bottom-0 left-0 h-1 bg-slate-100 dark:bg-slate-800 w-full">
+<div class="h-full bg-primary" style="width: 85%;"></div>
+</div>
+<div class="flex items-center justify-between">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Créditos consumidos</p>
+<span class="material-symbols-outlined text-slate-400 text-xl">toll</span>
+</div>
+<div class="flex items-baseline gap-2 mt-1">
+<p class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">850<span class="text-lg text-slate-400 font-medium">/1000</span></p>
+</div>
+</div>
+</div>
+<!-- Chart Section -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+<div class="flex items-start justify-between mb-8">
+<div>
+<p class="text-slate-900 dark:text-white text-base font-semibold">Firmas por Día</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Últimos 7 días</p>
+</div>
+<div class="flex items-center gap-2">
+<div class="flex items-center gap-1.5">
+<div class="w-3 h-3 rounded-sm bg-primary"></div>
+<span class="text-sm text-slate-600 dark:text-slate-300">Completadas</span>
+</div>
+</div>
+</div>
+<!-- Bar Chart (CSS based) -->
+<div class="h-[200px] flex items-end justify-between gap-2 sm:gap-4 w-full pt-4">
+<!-- Day 1 -->
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full max-w-[48px] bg-primary/20 dark:bg-primary/10 rounded-t flex items-end justify-center group-hover:bg-primary/30 transition-colors h-full relative">
+<div class="w-full bg-primary rounded-t absolute bottom-0 transition-all" style="height: 10%;"></div>
+<span class="absolute -top-6 text-xs font-semibold text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">12</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold">Lun</p>
+</div>
+<!-- Day 2 -->
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full max-w-[48px] bg-primary/20 dark:bg-primary/10 rounded-t flex items-end justify-center group-hover:bg-primary/30 transition-colors h-full relative">
+<div class="w-full bg-primary rounded-t absolute bottom-0 transition-all" style="height: 15%;"></div>
+<span class="absolute -top-6 text-xs font-semibold text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">18</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold">Mar</p>
+</div>
+<!-- Day 3 -->
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full max-w-[48px] bg-primary/20 dark:bg-primary/10 rounded-t flex items-end justify-center group-hover:bg-primary/30 transition-colors h-full relative">
+<div class="w-full bg-primary rounded-t absolute bottom-0 transition-all" style="height: 100%;"></div>
+<span class="absolute -top-6 text-xs font-semibold text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">125</span>
+</div>
+<p class="text-slate-900 dark:text-white text-xs font-bold">Mié</p>
+</div>
+<!-- Day 4 -->
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full max-w-[48px] bg-primary/20 dark:bg-primary/10 rounded-t flex items-end justify-center group-hover:bg-primary/30 transition-colors h-full relative">
+<div class="w-full bg-primary rounded-t absolute bottom-0 transition-all" style="height: 45%;"></div>
+<span class="absolute -top-6 text-xs font-semibold text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">56</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold">Jue</p>
+</div>
+<!-- Day 5 -->
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full max-w-[48px] bg-primary/20 dark:bg-primary/10 rounded-t flex items-end justify-center group-hover:bg-primary/30 transition-colors h-full relative">
+<div class="w-full bg-primary rounded-t absolute bottom-0 transition-all" style="height: 85%;"></div>
+<span class="absolute -top-6 text-xs font-semibold text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">106</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold">Vie</p>
+</div>
+<!-- Day 6 -->
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full max-w-[48px] bg-primary/20 dark:bg-primary/10 rounded-t flex items-end justify-center group-hover:bg-primary/30 transition-colors h-full relative">
+<div class="w-full bg-primary rounded-t absolute bottom-0 transition-all" style="height: 60%;"></div>
+<span class="absolute -top-6 text-xs font-semibold text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">75</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold">Sáb</p>
+</div>
+<!-- Day 7 -->
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full max-w-[48px] bg-primary/20 dark:bg-primary/10 rounded-t flex items-end justify-center group-hover:bg-primary/30 transition-colors h-full relative">
+<div class="w-full bg-primary rounded-t absolute bottom-0 transition-all" style="height: 50%;"></div>
+<span class="absolute -top-6 text-xs font-semibold text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">62</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold">Dom</p>
+</div>
+</div>
+</div>
+</main>
+</body></html>
