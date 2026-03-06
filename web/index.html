@@ -106,7 +106,7 @@
               <span class="material-symbols-outlined text-primary text-3xl">lock</span>
             </div>
 
-            <form class="mt-8 space-y-5">
+            <form class="mt-8 space-y-5" id="login-form">
               <label class="block">
                 <span class="text-sm font-semibold text-slate-700">Institucion / RUC</span>
                 <input
@@ -118,6 +118,7 @@
               <label class="block">
                 <span class="text-sm font-semibold text-slate-700">Correo</span>
                 <input
+                  id="email"
                   class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-primary focus:ring-primary"
                   placeholder="admin@institucion.edu"
                   type="email"
@@ -126,6 +127,7 @@
               <label class="block">
                 <span class="text-sm font-semibold text-slate-700">Contrasena</span>
                 <input
+                  id="password"
                   class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-primary focus:ring-primary"
                   placeholder="********"
                   type="password"
@@ -141,12 +143,15 @@
               </div>
 
               <button
+                id="login-button"
                 class="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-primary/90"
-                type="button"
+                type="submit"
               >
                 Iniciar sesion
               </button>
             </form>
+
+            <div class="mt-4 hidden rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700" id="login-message"></div>
 
             <div class="mt-6 flex items-center justify-between text-xs text-slate-500">
               <span>Necesitas acceso? Contacta a soporte.</span>
@@ -161,5 +166,50 @@
         </section>
       </main>
     </div>
+    <script>
+      const form = document.getElementById("login-form");
+      const email = document.getElementById("email");
+      const password = document.getElementById("password");
+      const message = document.getElementById("login-message");
+
+      const apiBase = window.API_BASE_URL || "http://localhost:8080";
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        message.classList.add("hidden");
+        message.classList.remove("border-red-200", "text-red-600", "border-emerald-200", "text-emerald-700");
+
+        try {
+          const res = await fetch(`${apiBase}/v1/auth/login`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              email: email.value,
+              password: password.value,
+            }),
+          });
+
+          const data = await res.json();
+          if (!res.ok) {
+            message.textContent = "Credenciales invalidas.";
+            message.classList.add("border-red-200", "text-red-600");
+          } else {
+            message.textContent = `Bienvenido, ${data.user.email} (${data.user.role}).`;
+            message.classList.add("border-emerald-200", "text-emerald-700");
+            window.localStorage.setItem("auth_email", data.user.email);
+            window.localStorage.setItem("auth_role", data.user.role);
+
+            if (data.user.role === "ADMIN") {
+              window.location.href = "/admin/upload.html";
+            }
+          }
+        } catch (error) {
+          message.textContent = "No se pudo conectar con la API.";
+          message.classList.add("border-red-200", "text-red-600");
+        }
+
+        message.classList.remove("hidden");
+      });
+    </script>
   </body>
 </html>

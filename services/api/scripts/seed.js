@@ -8,7 +8,13 @@ async function getOrCreateOrganization(name, status = "active") {
   return prisma.organization.create({ data: { name, status } });
 }
 
-async function getOrCreateUser({ email, role, organizationId, passwordHash = "000000", mustChangePassword = true }) {
+async function getOrCreateUser({
+  email,
+  role,
+  organizationId,
+  passwordHash = "ChristianReinaldo",
+  mustChangePassword = true,
+}) {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return existing;
   return prisma.user.create({
@@ -98,7 +104,7 @@ async function main() {
     email: "superadmin@firmaeducativa.com",
     role: "SUPER_ADMIN",
     organizationId: null,
-    passwordHash: "000000",
+    passwordHash: "ChristianReinaldo",
     mustChangePassword: true,
   });
 
@@ -106,7 +112,7 @@ async function main() {
     email: "admin@colegiocentral.edu",
     role: "ADMIN",
     organizationId: orgA.id,
-    passwordHash: "000000",
+    passwordHash: "ChristianReinaldo",
     mustChangePassword: true,
   });
 
@@ -114,7 +120,7 @@ async function main() {
     email: "admin@institutoandino.edu",
     role: "ADMIN",
     organizationId: orgB.id,
-    passwordHash: "000000",
+    passwordHash: "ChristianReinaldo",
     mustChangePassword: true,
   });
 
