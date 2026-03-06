@@ -126,12 +126,21 @@
               </label>
               <label class="block">
                 <span class="text-sm font-semibold text-slate-700">Contrasena</span>
-                <input
-                  id="password"
-                  class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-primary focus:ring-primary"
-                  placeholder="********"
-                  type="password"
-                />
+                <div class="relative mt-2">
+                  <input
+                    id="password"
+                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm focus:border-primary focus:ring-primary"
+                    placeholder="********"
+                    type="password"
+                  />
+                  <button
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-500"
+                    id="toggle-password"
+                    type="button"
+                  >
+                    Ver
+                  </button>
+                </div>
               </label>
 
               <div class="flex items-center justify-between text-sm">
@@ -171,6 +180,7 @@
       const email = document.getElementById("email");
       const password = document.getElementById("password");
       const message = document.getElementById("login-message");
+      const togglePassword = document.getElementById("toggle-password");
 
       const apiBase = window.API_BASE_URL || "http://localhost:8080";
 
@@ -209,6 +219,12 @@
         }
 
         message.classList.remove("hidden");
+      });
+
+      togglePassword.addEventListener("click", () => {
+        const isHidden = password.type === "password";
+        password.type = isHidden ? "text" : "password";
+        togglePassword.textContent = isHidden ? "Ocultar" : "Ver";
       });
     </script>
   </body>
