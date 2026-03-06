@@ -8,7 +8,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
   },
-  "devDependencies": {
+  "dependencies": {
     "prisma": "^5.22.0"
   }
 }

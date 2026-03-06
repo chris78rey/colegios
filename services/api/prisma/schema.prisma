@@ -12,11 +12,14 @@ model Organization {
   name      String
   status    String   @default("active")
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   users     User[]
   templates Template[]
   requests  Request[]
   credits   OrgCredit?
+
+  @@index([status])
 }
 
 model User {
@@ -27,8 +30,11 @@ model User {
   passwordHash        String
   mustChangePassword  Boolean  @default(true)
   createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
 }
 
 model Template {
@@ -40,9 +46,12 @@ model Template {
   signY          Int
   signPage       Int
   createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id])
   requests     Request[]
+
+  @@index([organizationId])
 }
 
 model Request {
@@ -52,11 +61,16 @@ model Request {
   omniId         String?
   status         String   @default("PENDING")
   createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id])
   template     Template     @relation(fields: [templateId], references: [id])
   signatories  Signatory[]
   events       RequestEvent[]
+
+  @@index([organizationId, status])
+  @@index([templateId])
+  @@index([omniId])
 }
 
 model Signatory {
@@ -68,8 +82,12 @@ model Signatory {
   email          String
   sanitizedPhone String
   createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   request Request @relation(fields: [requestId], references: [id])
+
+  @@index([requestId])
+  @@index([sanitizedPhone])
 }
 
 model RequestEvent {
@@ -80,11 +98,15 @@ model RequestEvent {
   createdAt DateTime @default(now())
 
   request Request @relation(fields: [requestId], references: [id])
+
+  @@index([requestId, createdAt])
 }
 
 model OrgCredit {
   organizationId String  @id
   balance        Int     @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id])
 }
