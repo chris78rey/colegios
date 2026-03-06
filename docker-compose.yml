@@ -18,14 +18,29 @@ services:
     depends_on:
       - postgres
       - redis
-    ports:
-      - '8080:8080'
+    networks:
+      - coolify
+    expose:
+      - '8080'
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - 'traefik.http.routers.${CLIENT_ID}-api.rule=Host(`${DOMAIN}`)'
+      - 'traefik.http.routers.${CLIENT_ID}-api.entrypoints=https'
+      - 'traefik.http.routers.${CLIENT_ID}-api.tls=true'
+      - 'traefik.http.routers.${CLIENT_ID}-api.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.${CLIENT_ID}-api.loadbalancer.server.port=8080'
+      - 'traefik.http.routers.${CLIENT_ID}-api-http.rule=Host(`${DOMAIN}`)'
+      - 'traefik.http.routers.${CLIENT_ID}-api-http.entrypoints=http'
+      - 'traefik.http.routers.${CLIENT_ID}-api-http.middlewares=${CLIENT_ID}-redirect'
+      - 'traefik.http.middlewares.${CLIENT_ID}-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.middlewares.${CLIENT_ID}-redirect.redirectscheme.permanent=true'
 
   worker:
     build:
@@ -44,6 +59,8 @@ services:
     depends_on:
       - postgres
       - redis
+    networks:
+      - coolify
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8081/health"]
       interval: 30s
@@ -61,11 +78,15 @@ services:
       - TZ=America/Guayaquil
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
-    ports:
-      - '5432:5432'
+    networks:
+      - coolify
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - '6379:6379'
+    networks:
+      - coolify
+
+networks:
+  coolify:
+    external: true
