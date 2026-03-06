@@ -12,3 +12,7 @@ UI estatica (login)
 - Archivo: `web/index.html`
 - Vista rapida (opcion 1): `python -m http.server 5173 --directory web`
 - Vista rapida (opcion 2): `npx serve web`
+
+Docker local (compose)
+- Crea un archivo .env con: CLIENT_ID=local, DOMAIN=local.test, COOLIFY_EXTERNAL_NETWORK=false
+- Luego ejecuta: docker compose up --build

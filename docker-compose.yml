@@ -99,4 +99,5 @@ services:
 
 networks:
   coolify:
-    external: true
+    name: ${COOLIFY_NETWORK_NAME:-coolify}
+    external: ${COOLIFY_EXTERNAL_NETWORK:-true}
