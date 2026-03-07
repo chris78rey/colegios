@@ -208,6 +208,9 @@
             message.classList.add("border-emerald-200", "text-emerald-700");
             window.localStorage.setItem("auth_email", data.user.email);
             window.localStorage.setItem("auth_role", data.user.role);
+            if (data.user.organizationId) {
+              window.localStorage.setItem("auth_org_id", data.user.organizationId);
+            }
 
             if (data.user.role === "ADMIN") {
               window.location.href = "/admin/upload.html";

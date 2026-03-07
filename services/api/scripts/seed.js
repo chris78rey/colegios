@@ -22,11 +22,33 @@ async function getOrCreateUser({
   });
 }
 
-async function getOrCreateTemplate({ organizationId, type, pdfPath, signX, signY, signPage }) {
+async function getOrCreateTemplate({
+  organizationId,
+  name,
+  type,
+  pdfPath,
+  signX,
+  signY,
+  signPage,
+  placeholders = [],
+  requiredColumns = [],
+  status = "active",
+}) {
   const existing = await prisma.template.findFirst({ where: { organizationId, type } });
   if (existing) return existing;
   return prisma.template.create({
-    data: { organizationId, type, pdfPath, signX, signY, signPage },
+    data: {
+      organizationId,
+      name,
+      type,
+      pdfPath,
+      signX,
+      signY,
+      signPage,
+      placeholders,
+      requiredColumns,
+      status,
+    },
   });
 }
 
@@ -126,20 +148,40 @@ async function main() {
 
   const templateA = await getOrCreateTemplate({
     organizationId: orgA.id,
+    name: "Solicitud Matricula 2024",
     type: "matricula-2024",
     pdfPath: "/data/storage/templates/matricula-2024.pdf",
     signX: 420,
     signY: 690,
     signPage: 1,
+    placeholders: [
+      "nombre_estudiante",
+      "representante",
+      "correo",
+      "celular",
+      "institucion",
+    ],
+    requiredColumns: ["Nombre", "Representante", "Correo", "Celular"],
+    status: "active",
   });
 
   const templateB = await getOrCreateTemplate({
     organizationId: orgB.id,
+    name: "Acta de Calificaciones",
     type: "acta-calificaciones",
     pdfPath: "/data/storage/templates/acta-calificaciones.pdf",
     signX: 400,
     signY: 680,
     signPage: 1,
+    placeholders: [
+      "nombre_estudiante",
+      "representante",
+      "correo",
+      "celular",
+      "institucion",
+    ],
+    requiredColumns: ["Nombre", "Representante", "Correo", "Celular"],
+    status: "active",
   });
 
   await ensureCredits(orgA.id, 1500);
