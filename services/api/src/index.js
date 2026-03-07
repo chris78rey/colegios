@@ -35,7 +35,7 @@ async function readBuffer(req) {
 
 function setCors(res) {
   res.setHeader("access-control-allow-origin", corsOrigin);
-  res.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
+  res.setHeader("access-control-allow-methods", "GET,POST,PATCH,DELETE,OPTIONS");
   res.setHeader("access-control-allow-headers", "content-type");
 }
 
@@ -187,10 +187,16 @@ const server = http.createServer((req, res) => {
       try {
         const id = url.split("/").pop();
         const body = await readJson(req);
-        const status = body.status === "inactive" ? "inactive" : "active";
+        const data = {};
+        if (typeof body.name === "string" && body.name.trim()) {
+          data.name = body.name.trim();
+        }
+        if (body.status) {
+          data.status = body.status === "inactive" ? "inactive" : "active";
+        }
         const org = await prisma.organization.update({
           where: { id },
-          data: { status },
+          data,
         });
         return json(res, 200, { organization: org });
       } catch (error) {
@@ -266,6 +272,46 @@ const server = http.createServer((req, res) => {
         return json(res, 201, { user });
       } catch (error) {
         return json(res, 500, { error: "user_create_failed" });
+      }
+    })();
+  }
+
+  if (url.startsWith("/v1/users") && method === "GET") {
+    return (async () => {
+      try {
+        const query = new URL(url, `http://${req.headers.host || "localhost"}`).searchParams;
+        const organizationId = query.get("organizationId");
+        const sort = query.get("sort");
+        const where = organizationId ? { organizationId } : {};
+        const orderBy = sort === "org" ? [{ organizationId: "asc" }, { email: "asc" }] : { createdAt: "desc" };
+        const users = await prisma.user.findMany({
+          where,
+          orderBy,
+        });
+        return json(res, 200, { items: users });
+      } catch (error) {
+        return json(res, 500, { error: "users_failed" });
+      }
+    })();
+  }
+
+  if (url.startsWith("/v1/users/") && method === "PATCH") {
+    return (async () => {
+      try {
+        const id = url.split("/").pop();
+        const body = await readJson(req);
+        const email = String(body.email || "").toLowerCase().trim();
+        const data = {};
+        if (email) data.email = email;
+        if (body.organizationId) data.organizationId = body.organizationId;
+        if (!Object.keys(data).length) return json(res, 400, { error: "missing_fields" });
+        const user = await prisma.user.update({
+          where: { id },
+          data,
+        });
+        return json(res, 200, { user });
+      } catch (error) {
+        return json(res, 500, { error: "user_update_failed" });
       }
     })();
   }
