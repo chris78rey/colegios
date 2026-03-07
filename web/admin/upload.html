@@ -244,7 +244,11 @@
       if (storedEmail) userEmail.textContent = storedEmail;
       const storedOrgId = window.localStorage.getItem("auth_org_id");
       const storedRole = window.localStorage.getItem("auth_role");
-      const apiBase = window.API_BASE_URL || "http://localhost:8080";
+      const apiBase =
+        window.API_BASE_URL ||
+        (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+          ? "http://localhost:8080"
+          : window.location.origin);
 
       document.getElementById("logout").addEventListener("click", () => {
         window.localStorage.removeItem("auth_email");

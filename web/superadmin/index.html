@@ -130,7 +130,11 @@
     <script>
       const storedEmail = window.localStorage.getItem("auth_email");
       if (storedEmail) document.getElementById("user-email").textContent = storedEmail;
-      const apiBase = window.API_BASE_URL || "http://localhost:8080";
+      const apiBase =
+        window.API_BASE_URL ||
+        (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+          ? "http://localhost:8080"
+          : window.location.origin);
       const orgTable = document.getElementById("org-table");
 
       async function loadOrganizations() {
