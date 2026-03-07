@@ -123,6 +123,12 @@
               <li>No hay plantillas cargadas.</li>
             </ul>
           </div>
+          <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Mapeo Excel → Placeholders</p>
+            <div class="mt-3 grid gap-3 sm:grid-cols-2" id="mapping-grid">
+              <div class="text-sm text-slate-500">Carga un Excel para mapear columnas.</div>
+            </div>
+          </div>
         </section>
 
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
@@ -227,6 +233,9 @@
       const templateNameInput = document.getElementById("template-name-input");
       const placeholderList = document.getElementById("placeholder-list");
       const templateList = document.getElementById("template-list");
+      const mappingGrid = document.getElementById("mapping-grid");
+      let currentPlaceholders = ["nombre_estudiante", "representante", "correo", "celular", "institucion"];
+      let currentHeaders = [];
       const selectAllBtn = document.getElementById("select-all");
       const selectNoneBtn = document.getElementById("select-none");
       const selectedCount = document.getElementById("selected-count");
@@ -283,10 +292,12 @@
           if (res.ok && data.template) {
             templateName.textContent = `Plantilla subida: ${data.template.name}`;
             const placeholders = data.template.placeholders || [];
+            currentPlaceholders = placeholders.length ? placeholders : currentPlaceholders;
             placeholderList.innerHTML = placeholders.length
               ? placeholders.map((p) => `<li>{{${p}}}</li>`).join("")
               : "<li>No se detectaron placeholders.</li>";
             loadTemplates();
+            renderMapping();
           } else {
             templateName.textContent = "Error al subir plantilla.";
           }
@@ -310,6 +321,29 @@
 
       selectAllBtn.addEventListener("click", () => setAllSelections(true));
       selectNoneBtn.addEventListener("click", () => setAllSelections(false));
+
+      function renderMapping() {
+        if (!currentHeaders.length || !currentPlaceholders.length) {
+          mappingGrid.innerHTML = "<div class=\"text-sm text-slate-500\">Carga un Excel para mapear columnas.</div>";
+          return;
+        }
+        mappingGrid.innerHTML = currentPlaceholders
+          .map((ph) => {
+            const options = currentHeaders
+              .map((h) => `<option value=\"${h}\">${h}</option>`)
+              .join("");
+            return `
+              <label class=\"flex flex-col gap-2 text-sm\">
+                <span class=\"text-slate-600\">{{${ph}}}</span>
+                <select class=\"rounded-lg border border-slate-200 px-3 py-2\" data-placeholder=\"${ph}\">
+                  <option value=\"\">Selecciona columna...</option>
+                  ${options}
+                </select>
+              </label>
+            `;
+          })
+          .join("");
+      }
 
       function renderRows(rows) {
         previewBody.innerHTML = rows
@@ -343,8 +377,10 @@
           const reader = new FileReader();
           reader.onload = () => {
             const lines = reader.result.trim().split("\n");
+            currentHeaders = lines[0].split(",").map((h) => h.trim());
             const rows = lines.slice(1).map((line) => line.split(","));
             renderRows(rows);
+            renderMapping();
           };
           reader.readAsText(file);
           return;
@@ -357,8 +393,11 @@
             const workbook = XLSX.read(data, { type: "array" });
             const sheetName = workbook.SheetNames[0];
             const sheet = workbook.Sheets[sheetName];
-            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }).slice(1);
+            const sheetRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            currentHeaders = (sheetRows[0] || []).map((h) => String(h).trim());
+            const rows = sheetRows.slice(1);
             renderRows(rows);
+            renderMapping();
           };
           reader.readAsArrayBuffer(file);
         }
