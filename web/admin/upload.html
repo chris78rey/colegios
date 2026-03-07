@@ -15,6 +15,7 @@
       rel="stylesheet"
     />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
     <script id="tailwind-config">
       tailwind.config = {
         theme: {
@@ -70,6 +71,14 @@
             >
               <span class="material-symbols-outlined text-sm">download</span>
               Descargar plantilla ejemplo
+            </a>
+            <a
+              class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+              href="plantilla_matricula_extensa.docx"
+              download
+            >
+              <span class="material-symbols-outlined text-sm">description</span>
+              Descargar solicitud extensa
             </a>
             <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600">
               <span class="material-symbols-outlined text-sm">upload_file</span>
@@ -237,6 +246,29 @@
       selectAllBtn.addEventListener("click", () => setAllSelections(true));
       selectNoneBtn.addEventListener("click", () => setAllSelections(false));
 
+      function renderRows(rows) {
+        previewBody.innerHTML = rows
+          .map((row) => {
+            const [nombre, cedula, representante, correo, celular] = row;
+            return `
+              <tr>
+                <td class="px-4 py-3"><input class="row-check" type="checkbox" checked /></td>
+                <td class="px-4 py-3">${nombre || ""}</td>
+                <td class="px-4 py-3">${cedula || ""}</td>
+                <td class="px-4 py-3">${representante || ""}</td>
+                <td class="px-4 py-3">${correo || ""}</td>
+                <td class="px-4 py-3">${celular || ""}</td>
+              </tr>
+            `;
+          })
+          .join("");
+
+        document.querySelectorAll(".row-check").forEach((c) => {
+          c.addEventListener("change", updateSelectedCount);
+        });
+        updateSelectedCount();
+      }
+
       fileInput.addEventListener("change", (event) => {
         const file = event.target.files[0];
         if (!file) return;
@@ -245,28 +277,25 @@
         if (file.name.endsWith(".csv")) {
           const reader = new FileReader();
           reader.onload = () => {
-            const lines = reader.result.trim().split("\n").slice(1, 6);
-            previewBody.innerHTML = lines
-              .map((line) => {
-                const [nombre, cedula, representante, correo, celular] = line.split(",");
-                return `
-                  <tr>
-                    <td class="px-4 py-3"><input class="row-check" type="checkbox" checked /></td>
-                    <td class="px-4 py-3">${nombre || ""}</td>
-                    <td class="px-4 py-3">${cedula || ""}</td>
-                    <td class="px-4 py-3">${representante || ""}</td>
-                    <td class="px-4 py-3">${correo || ""}</td>
-                    <td class="px-4 py-3">${celular || ""}</td>
-                  </tr>
-                `;
-              })
-              .join("");
-            document.querySelectorAll(".row-check").forEach((c) => {
-              c.addEventListener("change", updateSelectedCount);
-            });
-            updateSelectedCount();
+            const lines = reader.result.trim().split("\n");
+            const rows = lines.slice(1).map((line) => line.split(","));
+            renderRows(rows);
           };
           reader.readAsText(file);
+          return;
+        }
+
+        if (file.name.endsWith(".xlsx")) {
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }).slice(1);
+            renderRows(rows);
+          };
+          reader.readAsArrayBuffer(file);
         }
       });
 
