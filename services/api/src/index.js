@@ -168,11 +168,85 @@ const server = http.createServer((req, res) => {
     return json(res, 200, { items: [] });
   }
 
+  if (url === "/v1/organizations" && method === "GET") {
+    return (async () => {
+      try {
+        const items = await prisma.organization.findMany({
+          orderBy: { createdAt: "desc" },
+          include: { credits: true },
+        });
+        return json(res, 200, { items });
+      } catch (error) {
+        return json(res, 500, { error: "orgs_failed" });
+      }
+    })();
+  }
+
+  if (url === "/v1/organizations" && method === "POST") {
+    return (async () => {
+      try {
+        const body = await readJson(req);
+        const name = String(body.name || "").trim();
+        if (!name) return json(res, 400, { error: "missing_name" });
+        const org = await prisma.organization.create({
+          data: { name, status: body.status || "active" },
+        });
+        if (body.initialCredits) {
+          await prisma.orgCredit.upsert({
+            where: { organizationId: org.id },
+            update: { balance: Number(body.initialCredits) || 0 },
+            create: { organizationId: org.id, balance: Number(body.initialCredits) || 0 },
+          });
+        }
+        return json(res, 201, { organization: org });
+      } catch (error) {
+        return json(res, 500, { error: "org_create_failed" });
+      }
+    })();
+  }
+
+  if (url === "/v1/users" && method === "POST") {
+    return (async () => {
+      try {
+        const body = await readJson(req);
+        const email = String(body.email || "").toLowerCase().trim();
+        const role = String(body.role || "ADMIN");
+        const organizationId = body.organizationId || null;
+        const password = String(body.password || "ChristianReinaldo");
+
+        if (!email) return json(res, 400, { error: "missing_email" });
+        if (role === "ADMIN" && !organizationId) {
+          return json(res, 400, { error: "missing_organization" });
+        }
+
+        const existing = await prisma.user.findUnique({ where: { email } });
+        if (existing) return json(res, 409, { error: "user_exists" });
+
+        const user = await prisma.user.create({
+          data: {
+            email,
+            role,
+            organizationId,
+            passwordHash: password,
+            mustChangePassword: true,
+          },
+        });
+        return json(res, 201, { user });
+      } catch (error) {
+        return json(res, 500, { error: "user_create_failed" });
+      }
+    })();
+  }
+
   if (url.startsWith("/v1/templates") && method === "GET") {
     return (async () => {
       try {
         const query = new URL(url, `http://${req.headers.host || "localhost"}`).searchParams;
         const organizationId = query.get("organizationId");
+        const role = query.get("role");
+        if (!organizationId && role !== "SUPER_ADMIN") {
+          return json(res, 400, { error: "organization_required" });
+        }
         const where = organizationId ? { organizationId } : {};
         const templates = await prisma.template.findMany({
           where,
@@ -198,11 +272,15 @@ const server = http.createServer((req, res) => {
         const buffer = await readBuffer(req);
         const { fields, files } = parseMultipart(buffer, boundaryMatch[1]);
         const organizationId = fields.organizationId;
+        const role = fields.role || "ADMIN";
         const name = fields.name || "Plantilla";
         const file = files.find((f) => f.name === "file");
 
         if (!organizationId || !file) {
           return json(res, 400, { error: "missing_fields" });
+        }
+        if (role !== "ADMIN") {
+          return json(res, 403, { error: "forbidden" });
         }
 
         const placeholders = extractPlaceholdersFromDocx(file.data);

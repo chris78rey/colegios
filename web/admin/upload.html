@@ -243,6 +243,7 @@
       const storedEmail = window.localStorage.getItem("auth_email");
       if (storedEmail) userEmail.textContent = storedEmail;
       const storedOrgId = window.localStorage.getItem("auth_org_id");
+      const storedRole = window.localStorage.getItem("auth_role");
       const apiBase = window.API_BASE_URL || "http://localhost:8080";
 
       document.getElementById("logout").addEventListener("click", () => {
@@ -254,7 +255,9 @@
       async function loadTemplates() {
         if (!storedOrgId) return;
         try {
-          const res = await fetch(`${apiBase}/v1/templates?organizationId=${storedOrgId}`);
+          const res = await fetch(
+            `${apiBase}/v1/templates?organizationId=${storedOrgId}&role=${encodeURIComponent(storedRole || "ADMIN")}`
+          );
           const data = await res.json();
           if (!data.items || data.items.length === 0) {
             templateList.innerHTML = "<li>No hay plantillas cargadas.</li>";
@@ -280,6 +283,7 @@
 
         const form = new FormData();
         form.append("organizationId", storedOrgId);
+        form.append("role", storedRole || "ADMIN");
         form.append("name", templateNameInput.value || file.name);
         form.append("file", file);
 

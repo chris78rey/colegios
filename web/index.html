@@ -108,14 +108,6 @@
 
             <form class="mt-8 space-y-5" id="login-form">
               <label class="block">
-                <span class="text-sm font-semibold text-slate-700">Institucion / RUC</span>
-                <input
-                  class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-primary focus:ring-primary"
-                  placeholder="Ej. 1790013913001"
-                  type="text"
-                />
-              </label>
-              <label class="block">
                 <span class="text-sm font-semibold text-slate-700">Correo</span>
                 <input
                   id="email"
@@ -170,7 +162,7 @@
 
           <div class="mt-6 flex items-center justify-between text-xs text-slate-400">
             <span>v0.1 MVP</span>
-            <span>Credenciales iniciales: 000000</span>
+            <span>Credenciales iniciales: ChristianReinaldo</span>
           </div>
         </section>
       </main>
@@ -206,14 +198,25 @@
           } else {
             message.textContent = `Bienvenido, ${data.user.email} (${data.user.role}).`;
             message.classList.add("border-emerald-200", "text-emerald-700");
-            window.localStorage.setItem("auth_email", data.user.email);
-            window.localStorage.setItem("auth_role", data.user.role);
-            if (data.user.organizationId) {
-              window.localStorage.setItem("auth_org_id", data.user.organizationId);
+            try {
+              window.localStorage.setItem("auth_email", data.user.email);
+              window.localStorage.setItem("auth_role", data.user.role);
+              if (data.user.organizationId) {
+                window.localStorage.setItem("auth_org_id", data.user.organizationId);
+              }
+            } catch (storageError) {
+              // ignore storage errors (private mode)
             }
 
             if (data.user.role === "ADMIN") {
-              window.location.href = "/admin/upload.html";
+              setTimeout(() => {
+                window.location.href = "/admin/upload.html";
+              }, 150);
+            }
+            if (data.user.role === "SUPER_ADMIN") {
+              setTimeout(() => {
+                window.location.href = "/superadmin/index.html";
+              }, 150);
             }
           }
         } catch (error) {
