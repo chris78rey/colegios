@@ -37,6 +37,7 @@
   </head>
   <body class="bg-mist font-display text-ink">
     <div class="min-h-screen">
+      <div id="debug-errors" class="hidden fixed bottom-6 right-6 max-w-sm rounded-xl border border-red-200 bg-white p-4 text-xs text-red-700 shadow-soft"></div>
       <header class="bg-white border-b border-slate-200">
         <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div class="flex items-center gap-3">
@@ -58,15 +59,24 @@
       <main class="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
         <section class="grid gap-4 sm:grid-cols-3">
           <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
-            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Instituciones</p>
+            <div class="flex items-center justify-between">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Instituciones</p>
+              <span class="text-slate-400" title="Cantidad de colegios registrados y habilitados.">?</span>
+            </div>
             <p class="mt-2 text-3xl font-bold">2</p>
           </div>
           <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
-            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Creditos totales</p>
+            <div class="flex items-center justify-between">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Creditos totales</p>
+              <span class="text-slate-400" title="Suma de saldos disponibles en todas las instituciones.">?</span>
+            </div>
             <p class="mt-2 text-3xl font-bold">2,300</p>
           </div>
           <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
-            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Solicitudes activas</p>
+            <div class="flex items-center justify-between">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Solicitudes activas</p>
+              <span class="text-slate-400" title="Firmas en proceso: pendientes o enviadas, no finalizadas.">?</span>
+            </div>
             <p class="mt-2 text-3xl font-bold">4</p>
           </div>
         </section>
@@ -115,7 +125,7 @@
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
           <h2 class="text-xl font-bold">Crear usuario ADMIN</h2>
           <div class="mt-4 grid gap-3 sm:grid-cols-3">
-            <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm" id="user-email" placeholder="correo@colegio.edu" type="email" />
+            <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm" id="admin-email" placeholder="correo@colegio.edu" type="email" />
             <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm" id="user-password" placeholder="Password" type="text" value="ChristianReinaldo" />
             <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm" id="user-org" placeholder="Organization ID" type="text" />
           </div>
@@ -128,6 +138,20 @@
     </div>
 
     <script>
+      const debugEnabled = new URLSearchParams(window.location.search).has("debug");
+      const debugBox = document.getElementById("debug-errors");
+      const showDebug = (msg) => {
+        if (!debugEnabled) return;
+        debugBox.textContent = msg;
+        debugBox.classList.remove("hidden");
+      };
+      window.addEventListener("error", (event) => {
+        showDebug(`JS Error: ${event.message}`);
+      });
+      window.addEventListener("unhandledrejection", (event) => {
+        showDebug(`Promise Error: ${event.reason}`);
+      });
+
       const storedEmail = window.localStorage.getItem("auth_email");
       if (storedEmail) document.getElementById("user-email").textContent = storedEmail;
       const apiBase =
@@ -178,7 +202,7 @@
       });
 
       document.getElementById("create-user").addEventListener("click", async () => {
-        const email = document.getElementById("user-email").value.trim();
+        const email = document.getElementById("admin-email").value.trim();
         const password = document.getElementById("user-password").value.trim();
         const organizationId = document.getElementById("user-org").value.trim();
         const message = document.getElementById("user-message");

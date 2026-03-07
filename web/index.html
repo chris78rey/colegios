@@ -63,6 +63,7 @@
       <div class="absolute inset-0 grid-glow"></div>
       <div class="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl animate-float"></div>
       <div class="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-glow/20 blur-3xl animate-float"></div>
+      <div id="debug-errors" class="hidden fixed bottom-6 right-6 max-w-sm rounded-xl border border-red-200 bg-white p-4 text-xs text-red-700 shadow-soft"></div>
 
       <main class="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col items-stretch gap-10 px-6 py-10 lg:flex-row lg:items-center">
         <section class="flex-1 space-y-8 animate-fade">
@@ -168,6 +169,20 @@
       </main>
     </div>
     <script>
+      const debugEnabled = new URLSearchParams(window.location.search).has("debug");
+      const debugBox = document.getElementById("debug-errors");
+      const showDebug = (msg) => {
+        if (!debugEnabled) return;
+        debugBox.textContent = msg;
+        debugBox.classList.remove("hidden");
+      };
+      window.addEventListener("error", (event) => {
+        showDebug(`JS Error: ${event.message}`);
+      });
+      window.addEventListener("unhandledrejection", (event) => {
+        showDebug(`Promise Error: ${event.reason}`);
+      });
+
       const form = document.getElementById("login-form");
       const email = document.getElementById("email");
       const password = document.getElementById("password");
