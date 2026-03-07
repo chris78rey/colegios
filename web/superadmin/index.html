@@ -3,6 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta http-equiv="cache-control" content="no-store, max-age=0" />
+    <meta http-equiv="pragma" content="no-cache" />
+    <meta http-equiv="expires" content="0" />
     <title>SuperAdmin | Instituciones</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -57,20 +60,13 @@
       </header>
 
       <main class="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
-        <section class="grid gap-4 sm:grid-cols-3">
+        <section class="grid gap-4 sm:grid-cols-2">
           <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
             <div class="flex items-center justify-between">
               <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Instituciones</p>
               <span class="text-slate-400" title="Cantidad de colegios registrados y habilitados.">?</span>
             </div>
-            <p class="mt-2 text-3xl font-bold">2</p>
-          </div>
-          <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
-            <div class="flex items-center justify-between">
-              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Creditos totales</p>
-              <span class="text-slate-400" title="Suma de saldos disponibles en todas las instituciones.">?</span>
-            </div>
-            <p class="mt-2 text-3xl font-bold">2,300</p>
+            <p class="mt-2 text-3xl font-bold" id="org-count">0</p>
           </div>
           <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
             <div class="flex items-center justify-between">
@@ -94,24 +90,18 @@
                 placeholder="Nombre de institucion"
                 type="text"
               />
-              <input
-                class="rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                id="org-credits"
-                placeholder="Creditos iniciales"
-                type="number"
-              />
               <button class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white" id="create-org">
                 Crear institucion
               </button>
             </div>
           </div>
+          <p class="mt-2 text-xs text-slate-500" id="org-message"></p>
           <div class="mt-4 overflow-x-auto">
             <table class="min-w-full text-left text-sm">
               <thead class="bg-slate-50 text-slate-500">
                 <tr>
                   <th class="px-4 py-3">Institucion</th>
                   <th class="px-4 py-3">Estado</th>
-                  <th class="px-4 py-3">Creditos</th>
                   <th class="px-4 py-3 text-right">Acciones</th>
                 </tr>
               </thead>
@@ -120,6 +110,12 @@
               </tbody>
             </table>
           </div>
+          <div class="mt-4">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Instituciones inactivas</p>
+            <ul class="mt-2 space-y-2 text-sm text-slate-600" id="inactive-list">
+              <li>No hay inactivas.</li>
+            </ul>
+          </div>
         </section>
 
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
@@ -127,7 +123,9 @@
           <div class="mt-4 grid gap-3 sm:grid-cols-3">
             <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm" id="admin-email" placeholder="correo@colegio.edu" type="email" />
             <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm" id="user-password" placeholder="Password" type="text" value="ChristianReinaldo" />
-            <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm" id="user-org" placeholder="Organization ID" type="text" />
+            <select class="rounded-xl border border-slate-200 px-3 py-2 text-sm" id="user-org">
+              <option value="">Selecciona institucion...</option>
+            </select>
           </div>
           <button class="mt-3 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white" id="create-user">
             Crear admin
@@ -160,14 +158,20 @@
           ? "http://localhost:8080"
           : window.location.origin);
       const orgTable = document.getElementById("org-table");
+      const orgMessage = document.getElementById("org-message");
+      const orgCount = document.getElementById("org-count");
+      const inactiveList = document.getElementById("inactive-list");
+      const userOrgSelect = document.getElementById("user-org");
 
       async function loadOrganizations() {
         const res = await fetch(`${apiBase}/v1/organizations`);
         const data = await res.json();
         if (!data.items) return;
-        orgTable.innerHTML = data.items
+        const activeItems = data.items.filter((org) => org.status !== "inactive");
+        const inactiveItems = data.items.filter((org) => org.status === "inactive");
+        orgCount.textContent = activeItems.length;
+        orgTable.innerHTML = activeItems
           .map((org) => {
-            const credits = org.credits ? org.credits.balance : 0;
             return `
               <tr>
                 <td class="px-4 py-3">
@@ -175,30 +179,138 @@
                   <div class="text-xs text-slate-500">${org.id}</div>
                 </td>
                 <td class="px-4 py-3">
-                  <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs text-emerald-700">${org.status}</span>
+                  <span class="rounded-full ${
+                    org.status === "inactive" ? "bg-slate-200 text-slate-600" : "bg-emerald-100 text-emerald-700"
+                  } px-2 py-1 text-xs">${org.status}</span>
                 </td>
-                <td class="px-4 py-3">${credits}</td>
-                <td class="px-4 py-3 text-right">
-                  <button class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold">Recargar</button>
+                <td class="px-4 py-3 text-right space-x-2">
+                  <button class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold toggle-status" data-id="${org.id}" data-status="${org.status}">
+                    ${org.status === "inactive" ? "Activar" : "Desactivar"}
+                  </button>
+                  <button class="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 soft-delete" data-id="${org.id}">
+                    Eliminar
+                  </button>
                 </td>
               </tr>
             `;
           })
           .join("");
+        document.querySelectorAll(".toggle-status").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = btn.dataset.id;
+            const nextStatus = btn.dataset.status === "inactive" ? "active" : "inactive";
+            try {
+              orgMessage.textContent = "Actualizando estado...";
+              const res = await fetch(`${apiBase}/v1/organizations/${id}`, {
+                method: "PATCH",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ status: nextStatus }),
+              });
+              if (!res.ok) {
+                const data = await res.json();
+                orgMessage.textContent = data.error || "No se pudo actualizar.";
+                showDebug(`Status update error: ${JSON.stringify(data)}`);
+                return;
+              }
+              orgMessage.textContent = "Estado actualizado.";
+              loadOrganizations();
+            } catch (error) {
+              orgMessage.textContent = "Error de red al actualizar.";
+              showDebug(`Status update network error: ${error}`);
+            }
+          });
+        });
+        document.querySelectorAll(".soft-delete").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = btn.dataset.id;
+            const confirmDelete = window.confirm("¿Desactivar esta institución? Se ocultará de la lista.");
+            if (!confirmDelete) return;
+            try {
+              orgMessage.textContent = "Desactivando institucion...";
+              const res = await fetch(`${apiBase}/v1/organizations/${id}`, { method: "DELETE" });
+              if (!res.ok) {
+                const data = await res.json();
+                orgMessage.textContent = data.error || "No se pudo desactivar.";
+                showDebug(`Delete error: ${JSON.stringify(data)}`);
+                return;
+              }
+              orgMessage.textContent = "Institucion desactivada.";
+              loadOrganizations();
+            } catch (error) {
+              orgMessage.textContent = "Error de red al desactivar.";
+              showDebug(`Delete network error: ${error}`);
+            }
+          });
+        });
+        inactiveList.innerHTML = inactiveItems.length
+          ? inactiveItems
+              .map(
+                (org) =>
+                  `<li class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
+                    <span>${org.name}</span>
+                    <button class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold reactivate" data-id="${org.id}">Activar</button>
+                  </li>`
+              )
+              .join("")
+          : "<li>No hay inactivas.</li>";
+        inactiveList.querySelectorAll(".reactivate").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = btn.dataset.id;
+            try {
+              orgMessage.textContent = "Reactivando institucion...";
+              const res = await fetch(`${apiBase}/v1/organizations/${id}`, {
+                method: "PATCH",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ status: "active" }),
+              });
+              if (!res.ok) {
+                const data = await res.json();
+                orgMessage.textContent = data.error || "No se pudo reactivar.";
+                showDebug(`Reactivate error: ${JSON.stringify(data)}`);
+                return;
+              }
+              orgMessage.textContent = "Institucion reactivada.";
+              loadOrganizations();
+            } catch (error) {
+              orgMessage.textContent = "Error de red al reactivar.";
+              showDebug(`Reactivate network error: ${error}`);
+            }
+          });
+        });
+
+        userOrgSelect.innerHTML = [
+          '<option value="">Selecciona institucion...</option>',
+          ...activeItems.map((org) => `<option value="${org.id}">${org.name}</option>`),
+        ].join("");
       }
 
       document.getElementById("create-org").addEventListener("click", async () => {
         const name = document.getElementById("org-name").value.trim();
-        const initialCredits = document.getElementById("org-credits").value;
-        if (!name) return;
-        await fetch(`${apiBase}/v1/organizations`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name, initialCredits }),
-        });
-        document.getElementById("org-name").value = "";
-        document.getElementById("org-credits").value = "";
-        loadOrganizations();
+        if (!name) {
+          orgMessage.textContent = "El nombre de la institucion es requerido.";
+          showDebug("Org create blocked: missing name");
+          return;
+        }
+        orgMessage.textContent = "";
+        try {
+          const res = await fetch(`${apiBase}/v1/organizations`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ name }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            orgMessage.textContent = data.error || "No se pudo crear la institucion.";
+            showDebug(`Org create error: ${JSON.stringify(data)}`);
+            return;
+          }
+          document.getElementById("org-name").value = "";
+          orgMessage.textContent = "Institucion creada.";
+          loadOrganizations();
+        } catch (error) {
+          orgMessage.textContent = "Error de red al crear institucion.";
+          showDebug(`Org create network error: ${error}`);
+        }
       });
 
       document.getElementById("create-user").addEventListener("click", async () => {
@@ -210,16 +322,22 @@
           message.textContent = "Email y organizationId son requeridos.";
           return;
         }
-        const res = await fetch(`${apiBase}/v1/users`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ email, password, role: "ADMIN", organizationId }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          message.textContent = data.error || "Error al crear usuario.";
-        } else {
-          message.textContent = "Usuario creado.";
+        try {
+          const res = await fetch(`${apiBase}/v1/users`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ email, password, role: "ADMIN", organizationId }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            message.textContent = data.error || "Error al crear usuario.";
+            showDebug(`User create error: ${JSON.stringify(data)}`);
+          } else {
+            message.textContent = "Usuario creado.";
+          }
+        } catch (error) {
+          message.textContent = "Error de red al crear usuario.";
+          showDebug(`User create network error: ${error}`);
         }
       });
 

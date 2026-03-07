@@ -182,6 +182,38 @@ const server = http.createServer((req, res) => {
     })();
   }
 
+  if (url.startsWith("/v1/organizations/") && method === "PATCH") {
+    return (async () => {
+      try {
+        const id = url.split("/").pop();
+        const body = await readJson(req);
+        const status = body.status === "inactive" ? "inactive" : "active";
+        const org = await prisma.organization.update({
+          where: { id },
+          data: { status },
+        });
+        return json(res, 200, { organization: org });
+      } catch (error) {
+        return json(res, 500, { error: "org_update_failed" });
+      }
+    })();
+  }
+
+  if (url.startsWith("/v1/organizations/") && method === "DELETE") {
+    return (async () => {
+      try {
+        const id = url.split("/").pop();
+        const org = await prisma.organization.update({
+          where: { id },
+          data: { status: "inactive" },
+        });
+        return json(res, 200, { organization: org });
+      } catch (error) {
+        return json(res, 500, { error: "org_delete_failed" });
+      }
+    })();
+  }
+
   if (url === "/v1/organizations" && method === "POST") {
     return (async () => {
       try {
