@@ -122,7 +122,12 @@
           <h2 class="text-xl font-bold">Crear usuario ADMIN</h2>
           <div class="mt-4 grid gap-3 sm:grid-cols-3">
             <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm" id="admin-email" placeholder="correo@colegio.edu" type="email" />
-            <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm" id="user-password" placeholder="Password" type="text" value="ChristianReinaldo" />
+            <div class="relative">
+              <input class="w-full rounded-xl border border-slate-200 px-3 py-2 pr-12 text-sm" id="user-password" placeholder="Password" type="password" value="ABC123#" />
+              <button class="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-600" id="toggle-user-password" type="button">
+                Ver
+              </button>
+            </div>
             <select class="rounded-xl border border-slate-200 px-3 py-2 text-sm" id="user-org">
               <option value="">Selecciona institucion...</option>
             </select>
@@ -348,6 +353,13 @@
           orgMessage.textContent = "Error de red al crear institucion.";
           showDebug(`Org create network error: ${error}`);
         }
+      });
+
+      document.getElementById("toggle-user-password").addEventListener("click", () => {
+        const input = document.getElementById("user-password");
+        const isHidden = input.type === "password";
+        input.type = isHidden ? "text" : "password";
+        document.getElementById("toggle-user-password").textContent = isHidden ? "Ocultar" : "Ver";
       });
 
       document.getElementById("create-user").addEventListener("click", async () => {

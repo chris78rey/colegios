@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  const passwordHash = "ChristianReinaldo";
+  const passwordHash = "ABC123#";
   const result = await prisma.user.updateMany({
     data: {
       passwordHash,

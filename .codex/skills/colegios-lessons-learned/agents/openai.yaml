@@ -1,0 +1,4 @@
+interface:
+  display_name: "Colegios Lessons Learned"
+  short_description: "Runbook for local dev and VPS deploy lessons."
+  default_prompt: "Use this skill when setting up local Docker, Prisma migrations, seeds, and Coolify/VPS deploy for colegios."

@@ -1,0 +1,17 @@
+services:
+  api:
+    networks:
+      - coolify
+  worker:
+    networks:
+      - coolify
+  postgres:
+    networks:
+      - coolify
+  redis:
+    networks:
+      - coolify
+networks:
+  coolify:
+    name: colegios_local
+    external: false

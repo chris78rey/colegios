@@ -1,0 +1,4 @@
+interface:
+  display_name: "Colegios DB Evolution"
+  short_description: "Track and govern schema changes without data loss."
+  default_prompt: "Use this skill when modifying Prisma models or migrations to ensure additive changes, data safety, and a persistent change log."
