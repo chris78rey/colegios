@@ -17,6 +17,9 @@ model Organization {
   users     User[]
   templates Template[]
   requests  Request[]
+  batches   Batch[]
+  templateGroups TemplateGroup[]
+  batchGroups BatchGroup[]
   credits   OrgCredit?
 
   @@index([status])
@@ -54,27 +57,125 @@ model Template {
 
   organization Organization @relation(fields: [organizationId], references: [id])
   requests     Request[]
+  batches      Batch[]
+  groupItems   TemplateGroupItem[]
 
   @@index([organizationId])
+}
+
+model TemplateGroup {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  items        TemplateGroupItem[]
+  batches      BatchGroup[]
+
+  @@index([organizationId])
+}
+
+model TemplateGroupItem {
+  id           String   @id @default(cuid())
+  groupId      String
+  templateId   String
+  order        Int      @default(0)
+  requiredSigners Int?
+  createdAt    DateTime @default(now())
+
+  group    TemplateGroup @relation(fields: [groupId], references: [id])
+  template Template      @relation(fields: [templateId], references: [id])
+
+  @@index([groupId])
+  @@index([templateId])
 }
 
 model Request {
   id             String   @id @default(cuid())
   organizationId String
   templateId     String
+  batchId        String?
+  requestGroupId String?
   omniId         String?
   status         String   @default("PENDING")
+  docxPath       String?
+  pdfPath        String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id])
   template     Template     @relation(fields: [templateId], references: [id])
+  batch        Batch?       @relation(fields: [batchId], references: [id])
+  requestGroup RequestGroup? @relation(fields: [requestGroupId], references: [id])
   signatories  Signatory[]
   events       RequestEvent[]
 
   @@index([organizationId, status])
   @@index([templateId])
   @@index([omniId])
+  @@index([requestGroupId])
+}
+
+model Batch {
+  id             String   @id @default(cuid())
+  organizationId String
+  templateId     String
+  status         String   @default("PENDING")
+  totalCount     Int      @default(0)
+  validCount     Int      @default(0)
+  invalidCount   Int      @default(0)
+  mapping        Json?
+  docxZipPath    String?
+  pdfZipPath     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  template     Template     @relation(fields: [templateId], references: [id])
+  requests     Request[]
+
+  @@index([organizationId, status])
+  @@index([templateId])
+}
+
+model BatchGroup {
+  id             String   @id @default(cuid())
+  organizationId String
+  groupId        String
+  status         String   @default("PENDING")
+  totalCount     Int      @default(0)
+  validCount     Int      @default(0)
+  invalidCount   Int      @default(0)
+  mapping        Json?
+  docxZipPath    String?
+  pdfZipPath     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  group        TemplateGroup @relation(fields: [groupId], references: [id])
+  requestGroups RequestGroup[]
+
+  @@index([organizationId, status])
+  @@index([groupId])
+}
+
+model RequestGroup {
+  id           String   @id @default(cuid())
+  batchGroupId String
+  rowIndex     Int
+  status       String   @default("PENDING")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  batchGroup BatchGroup @relation(fields: [batchGroupId], references: [id])
+  requests  Request[]
+
+  @@index([batchGroupId])
+  @@index([status])
 }
 
 model Signatory {

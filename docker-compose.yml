@@ -11,6 +11,9 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/colegios
       - REDIS_URL=redis://redis:6379
       - STORAGE_PATH=/data/storage
+      - API_BASE_URL=http://api:8080
+      - PDF_CONCURRENCY=2
+      - NODE_OPTIONS=--max-old-space-size=512
       - TZ=America/Guayaquil
       - SUPERADMIN_INIT_PASSWORD=000000
     volumes:
@@ -22,6 +25,10 @@ services:
       - coolify
     expose:
       - '8080'
+    deploy:
+      resources:
+        limits:
+          memory: 768M
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
       interval: 30s
@@ -53,6 +60,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/colegios
       - REDIS_URL=redis://redis:6379
       - STORAGE_PATH=/data/storage
+      - NODE_OPTIONS=--max-old-space-size=512
       - TZ=America/Guayaquil
     volumes:
       - ./data/storage:/data/storage
@@ -67,6 +75,10 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   web:
     image: nginx:1.27-alpine

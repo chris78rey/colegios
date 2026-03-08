@@ -1,7 +1,10 @@
 FROM node:20-bullseye-slim
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm install --production
+RUN apt-get update && apt-get install -y --no-install-recommends libreoffice libreoffice-java-common default-jre ghostscript pandoc \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install --production \
+    && npx playwright install --with-deps chromium
 COPY prisma ./prisma
 COPY scripts ./scripts
 COPY src ./src

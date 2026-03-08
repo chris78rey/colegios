@@ -18,7 +18,7 @@
       rel="stylesheet"
     />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
+    <script src="xlsx.full.min.js"></script>
     <script id="tailwind-config">
       tailwind.config = {
         theme: {
@@ -62,28 +62,12 @@
 
       <main class="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
-          <h2 class="text-xl font-bold">1. Plantilla Word con placeholders</h2>
+          <h2 class="text-xl font-bold">1. Plantilla Word o HTML con placeholders</h2>
           <p class="mt-2 text-sm text-slate-500">
-            Sube tu plantilla .docx con placeholders tipo <span class="font-semibold">{{nombre_estudiante}}</span>.
+            Sube tu plantilla .docx o .html con placeholders tipo <span class="font-semibold">{{nombre_estudiante}}</span>.
             En esta etapa solo mostramos un ejemplo y la vista previa.
           </p>
           <div class="mt-4 flex flex-wrap items-center gap-3">
-            <a
-              class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white"
-              href="plantilla_ejemplo.docx"
-              download
-            >
-              <span class="material-symbols-outlined text-sm">download</span>
-              Descargar plantilla ejemplo
-            </a>
-            <a
-              class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
-              href="plantilla_matricula_extensa.docx"
-              download
-            >
-              <span class="material-symbols-outlined text-sm">description</span>
-              Descargar solicitud extensa
-            </a>
             <input
               class="rounded-xl border border-slate-200 px-3 py-2 text-sm"
               id="template-name-input"
@@ -93,42 +77,103 @@
             />
             <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600">
               <span class="material-symbols-outlined text-sm">upload_file</span>
-              Subir plantilla
-              <input class="hidden" id="template-input" type="file" accept=".docx" />
+              Subir plantilla(s)
+              <input class="hidden" id="template-input" type="file" accept=".docx,.html,.htm" multiple />
             </label>
           </div>
-          <div class="mt-4 grid gap-4 sm:grid-cols-2">
-            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Placeholders detectados</p>
-              <ul class="mt-3 space-y-1 text-sm text-slate-700" id="placeholder-list">
-                <li>{{nombre_estudiante}}</li>
-                <li>{{representante}}</li>
-                <li>{{correo}}</li>
-                <li>{{celular}}</li>
-                <li>{{institucion}}</li>
-              </ul>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-white p-4">
-              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Vista previa (simulada)</p>
-              <div class="mt-3 space-y-2 text-sm text-slate-700">
-                <p class="font-semibold">Autorizacion de firma</p>
-                <p>Estudiante: <span class="font-medium" id="prev-estudiante">Ana Lucia Torres</span></p>
-                <p>Representante: <span class="font-medium" id="prev-representante">Carlos Torres</span></p>
-                <p>Correo: <span class="font-medium" id="prev-correo">carlos.t@example.com</span></p>
-                <p>Celular: <span class="font-medium" id="prev-celular">0991234567</span></p>
-                <p>Institucion: <span class="font-medium" id="prev-inst">Colegio Central</span></p>
-              </div>
-            </div>
+          <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Plantilla lista</p>
+            <p class="mt-2 text-sm text-slate-600">
+              Descarga el Excel de carga para obtener los encabezados y llenar los datos.
+            </p>
           </div>
           <p class="mt-4 text-xs text-slate-400" id="template-name">Ninguna plantilla subida.</p>
           <div class="mt-4 rounded-xl border border-slate-200 bg-white p-4">
             <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Plantillas disponibles</p>
-            <ul class="mt-3 space-y-1 text-sm text-slate-700" id="template-list">
-              <li>No hay plantillas cargadas.</li>
-            </ul>
+            <div class="mt-3 flex flex-wrap items-center gap-3">
+              <select class="rounded-lg border border-slate-200 px-3 py-2 text-sm" id="template-select">
+                <option value="">Selecciona una plantilla...</option>
+              </select>
+              <ul class="text-sm text-slate-700" id="template-list">
+                <li>No hay plantillas cargadas.</li>
+              </ul>
+            </div>
+            <div class="mt-4 flex flex-wrap items-center gap-2">
+              <span class="text-xs uppercase tracking-[0.2em] text-slate-400">Modo de lote</span>
+              <button
+                class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600"
+                id="mode-template"
+                type="button"
+              >
+                Plantilla unica
+              </button>
+              <button
+                class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600"
+                id="mode-group"
+                type="button"
+              >
+                Grupo de plantillas
+              </button>
+              <span class="ml-2 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600" id="active-group-chip">
+                Grupo seleccionado: Ninguno
+              </span>
+            </div>
           </div>
           <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Mapeo Excel → Placeholders</p>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Grupos de plantillas</p>
+              <span class="text-xs text-slate-400">Maximo 4 plantillas por grupo</span>
+            </div>
+            <div class="mt-3 grid gap-4 lg:grid-cols-2">
+              <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p class="text-sm font-semibold text-slate-700">Crear grupo</p>
+                <input
+                  class="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  id="group-name-input"
+                  placeholder="Nombre del grupo"
+                  type="text"
+                />
+                <div class="mt-3 space-y-2 text-sm text-slate-700" id="group-template-list">
+                  <p class="text-xs text-slate-500">Carga plantillas para poder crear grupos.</p>
+                </div>
+                <button
+                  class="mt-4 w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                  id="create-group"
+                  type="button"
+                >
+                  Crear grupo
+                </button>
+                <p class="mt-2 text-xs text-slate-500" id="group-message"></p>
+              </div>
+              <div class="rounded-xl border border-slate-200 bg-white p-4">
+                <p class="text-sm font-semibold text-slate-700">Seleccionar grupo</p>
+                <select class="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" id="group-select">
+                  <option value="">Selecciona un grupo...</option>
+                </select>
+                <ul class="mt-3 space-y-2 text-sm text-slate-700" id="group-list">
+                  <li>No hay grupos creados.</li>
+                </ul>
+                <div class="mt-3 flex items-center gap-2">
+                  <button
+                    class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
+                    id="download-excel"
+                    type="button"
+                  >
+                    Descargar Excel de carga
+                  </button>
+                </div>
+                <button
+                  class="mt-4 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700"
+                  id="update-group"
+                  type="button"
+                >
+                  Actualizar grupo seleccionado
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Mapeo Excel -> Placeholders</p>
             <div class="mt-3 grid gap-3 sm:grid-cols-2" id="mapping-grid">
               <div class="text-sm text-slate-500">Carga un Excel para mapear columnas.</div>
             </div>
@@ -136,25 +181,7 @@
         </section>
 
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
-          <h2 class="text-xl font-bold">2. Descarga plantilla de ejemplo (Excel)</h2>
-          <p class="mt-2 text-sm text-slate-500">
-            Usa este CSV como base para tu carga masiva. El envio esta deshabilitado en esta etapa.
-          </p>
-          <div class="mt-4 flex flex-wrap items-center gap-3">
-            <a
-              class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white"
-              href="ejemplo_carga.xlsx"
-              download
-            >
-              <span class="material-symbols-outlined text-sm">download</span>
-              Descargar Excel ejemplo
-            </a>
-            <span class="text-xs text-slate-400">Campos: Nombre, Cedula, Representante, Correo, Celular</span>
-          </div>
-        </section>
-
-        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
-          <h2 class="text-xl font-bold">3. Subir archivo</h2>
+          <h2 class="text-xl font-bold">2. Subir archivo</h2>
           <p class="mt-2 text-sm text-slate-500">Acepta .xlsx o .csv. Solo se muestra el preview.</p>
           <label class="mt-4 flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
             <span class="material-symbols-outlined text-4xl text-slate-400">upload_file</span>
@@ -167,7 +194,7 @@
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
           <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 class="text-xl font-bold">4. Preview</h2>
+              <h2 class="text-xl font-bold">3. Preview</h2>
               <p class="text-sm text-slate-500">Solo vista previa. El envio aun no esta implementado.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -189,8 +216,12 @@
               <button class="rounded-xl bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-600" disabled>
                 Enviar correos (pendiente)
               </button>
+              <button class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white" id="process-batch" type="button">
+                Procesar lote
+              </button>
             </div>
           </div>
+          <p class="mt-3 text-xs text-slate-500" id="batch-message"></p>
           <div class="mt-4 overflow-x-auto">
             <table class="min-w-full text-left text-sm">
               <thead class="bg-slate-50 text-slate-500">
@@ -224,6 +255,26 @@
             </table>
           </div>
         </section>
+
+        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 class="text-xl font-bold">4. Archivos generados</h2>
+              <p class="text-sm text-slate-500">Relaciona cada archivo con su registro del Excel.</p>
+            </div>
+            <button
+              class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
+              id="load-files"
+              type="button"
+            >
+              Cargar archivos del lote
+            </button>
+          </div>
+          <p class="mt-2 text-xs text-slate-500" id="files-message"></p>
+          <div class="mt-4 space-y-3" id="files-list">
+            <div class="text-sm text-slate-500">Aun no hay archivos cargados.</div>
+          </div>
+        </section>
       </main>
     </div>
 
@@ -251,9 +302,37 @@
       const templateNameInput = document.getElementById("template-name-input");
       const placeholderList = document.getElementById("placeholder-list");
       const templateList = document.getElementById("template-list");
+      const templateSelect = document.getElementById("template-select");
       const mappingGrid = document.getElementById("mapping-grid");
+      const processBatchBtn = document.getElementById("process-batch");
+      const batchMessage = document.getElementById("batch-message");
+      const groupSelect = document.getElementById("group-select");
+      const groupList = document.getElementById("group-list");
+      const groupNameInput = document.getElementById("group-name-input");
+      const groupTemplateList = document.getElementById("group-template-list");
+      const groupMessage = document.getElementById("group-message");
+      const createGroupBtn = document.getElementById("create-group");
+      const updateGroupBtn = document.getElementById("update-group");
+      const activeGroupChip = document.getElementById("active-group-chip");
+      const downloadExcelBtn = document.getElementById("download-excel");
+      const loadFilesBtn = document.getElementById("load-files");
+      const filesList = document.getElementById("files-list");
+      const filesMessage = document.getElementById("files-message");
+      const modeTemplateBtn = document.getElementById("mode-template");
+      const modeGroupBtn = document.getElementById("mode-group");
       let currentPlaceholders = ["nombre_estudiante", "representante", "correo", "celular", "institucion"];
       let currentHeaders = [];
+      let currentRows = [];
+      let templates = [];
+      let groups = [];
+      let batchLocked = false;
+      let selectedTemplateId = "";
+      let selectedGroupId = "";
+      let useGroupMode = false;
+      let placeholderUsage = {};
+      let templateNameTouched = false;
+      let lastBatchId = "";
+      let lastBatchMode = "template";
       const selectAllBtn = document.getElementById("select-all");
       const selectNoneBtn = document.getElementById("select-none");
       const selectedCount = document.getElementById("selected-count");
@@ -274,6 +353,303 @@
         window.location.href = "/";
       });
 
+      templateNameInput.addEventListener("input", () => {
+        templateNameTouched = true;
+      });
+
+      function setSelectedTemplate(id) {
+        selectedTemplateId = id || "";
+        const selected = templates.find((t) => t.id === selectedTemplateId);
+        if (selected && Array.isArray(selected.placeholders)) {
+          currentPlaceholders = selected.placeholders;
+          placeholderUsage = {};
+          if (placeholderList) {
+            placeholderList.innerHTML = selected.placeholders.map((p) => `<li>{{${p}}}</li>`).join("");
+          }
+        }
+        renderMapping();
+      }
+
+      function getGroupPlaceholderInfo(group) {
+        const usage = {};
+        const placeholders = [];
+        if (!group || !Array.isArray(group.items)) {
+          return { placeholders, usage };
+        }
+        group.items.forEach((item) => {
+          const template = item.template || {};
+          const list = Array.isArray(template.placeholders) ? template.placeholders : [];
+          list.forEach((ph) => {
+            if (!usage[ph]) usage[ph] = [];
+            if (template.name && !usage[ph].includes(template.name)) usage[ph].push(template.name);
+            if (!placeholders.includes(ph)) placeholders.push(ph);
+          });
+        });
+        return { placeholders, usage };
+      }
+
+      function setSelectedGroup(id) {
+        selectedGroupId = id || "";
+        const selected = groups.find((g) => g.id === selectedGroupId);
+        if (selected) {
+          groupNameInput.value = selected.name || "";
+          if (activeGroupChip) activeGroupChip.textContent = `Grupo seleccionado: ${selected.name}`;
+          const info = getGroupPlaceholderInfo(selected);
+          currentPlaceholders = info.placeholders;
+          placeholderUsage = info.usage;
+          if (placeholderList) {
+            placeholderList.innerHTML = currentPlaceholders.length
+              ? currentPlaceholders.map((p) => `<li>{{${p}}}</li>`).join("")
+              : "<li>No hay placeholders en el grupo.</li>";
+          }
+          const templateIds = new Set((selected.items || []).map((item) => item.templateId));
+          document.querySelectorAll(".group-template-check").forEach((check) => {
+            check.checked = templateIds.has(check.dataset.templateId);
+          });
+          document.querySelectorAll(".group-template-order").forEach((select) => {
+            const templateId = select.dataset.templateId;
+            const item = (selected.items || []).find((i) => i.templateId === templateId);
+            if (item) select.value = String(item.order ?? 0);
+          });
+        } else {
+          currentPlaceholders = [];
+          placeholderUsage = {};
+          if (placeholderList) {
+            placeholderList.innerHTML = "<li>No hay grupo seleccionado.</li>";
+          }
+          if (activeGroupChip) activeGroupChip.textContent = "Grupo seleccionado: Ninguno";
+        }
+        renderMapping();
+      }
+
+      function setMode(mode) {
+        useGroupMode = mode === "group";
+        if (useGroupMode) {
+          modeGroupBtn.classList.add("bg-slate-900", "text-white", "border-slate-900");
+          modeTemplateBtn.classList.remove("bg-slate-900", "text-white", "border-slate-900");
+          templateSelect.disabled = true;
+          groupSelect.disabled = false;
+          if (downloadExcelBtn) downloadExcelBtn.textContent = "Descargar Excel de grupo";
+          setSelectedGroup(selectedGroupId);
+        } else {
+          modeTemplateBtn.classList.add("bg-slate-900", "text-white", "border-slate-900");
+          modeGroupBtn.classList.remove("bg-slate-900", "text-white", "border-slate-900");
+          templateSelect.disabled = false;
+          groupSelect.disabled = true;
+          if (downloadExcelBtn) downloadExcelBtn.textContent = "Descargar Excel de plantilla";
+          setSelectedTemplate(selectedTemplateId);
+        }
+      }
+
+      function slugifyLabel(value) {
+        return String(value || "")
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)+/g, "");
+      }
+
+      function templateDisplayName(tpl) {
+        const name = String(tpl.name || "");
+        const type = String(tpl.type || "");
+        if (!type || type === name) return name;
+        const nameSlug = slugifyLabel(name);
+        if (nameSlug && type === nameSlug) return name;
+        return `${name} (${type})`;
+      }
+
+      function renderTemplates() {
+        if (!templates.length) {
+          templateList.innerHTML = "<li>No hay plantillas cargadas.</li>";
+          templateSelect.innerHTML = "<option value=\"\">Selecciona una plantilla...</option>";
+          groupTemplateList.innerHTML = "<p class=\"text-xs text-slate-500\">Carga plantillas para poder crear grupos.</p>";
+          return;
+        }
+        templateList.innerHTML = templates
+          .map(
+            (tpl) => `
+              <li class="flex items-center gap-2">
+                <span>${templateDisplayName(tpl)}</span>
+                <button class="text-red-500 text-xs underline delete-template" data-id="${tpl.id}">Eliminar</button>
+                <button class="text-slate-500 text-xs underline deactivate-template" data-id="${tpl.id}">Desactivar</button>
+              </li>
+            `
+          )
+          .join("");
+        templateSelect.innerHTML = [
+          '<option value="">Selecciona una plantilla...</option>',
+          ...templates.map((tpl) => `<option value="${tpl.id}">${tpl.name}</option>`),
+        ].join("");
+        if (!selectedTemplateId && templates[0]) {
+          templateSelect.value = templates[0].id;
+          setSelectedTemplate(templates[0].id);
+        }
+        renderGroupTemplateOptions();
+        templateList.querySelectorAll(".delete-template").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = btn.dataset.id;
+            if (!id) return;
+            const confirmed = window.confirm("Eliminar plantilla? Se borrara el registro y el archivo.");
+            if (!confirmed) return;
+            try {
+              const res = await fetch(`${apiBase}/v1/templates/${id}`, { method: "DELETE" });
+              if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                if (data.error === "template_in_use") {
+                  batchMessage.textContent = "No se puede eliminar: la plantilla tiene solicitudes o lotes asociados.";
+                } else {
+                  batchMessage.textContent = "No se pudo eliminar la plantilla.";
+                }
+                return;
+              }
+              templates = templates.filter((t) => t.id !== id);
+              if (selectedTemplateId === id) {
+                selectedTemplateId = "";
+              }
+              renderTemplates();
+            } catch (error) {
+              batchMessage.textContent = "Error de red al eliminar plantilla.";
+            }
+          });
+        });
+      }
+
+      function renderGroupTemplateOptions() {
+        if (!templates.length) {
+          groupTemplateList.innerHTML = "<p class=\"text-xs text-slate-500\">Carga plantillas para poder crear grupos.</p>";
+          return;
+        }
+        const options = [1, 2, 3, 4]
+          .map((value) => `<option value=\"${value}\">${value}</option>`)
+          .join("");
+        groupTemplateList.innerHTML = templates
+          .map(
+            (tpl, index) => `
+              <div class="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                <label class="flex items-center gap-2 text-sm">
+                  <input class="group-template-check" data-template-id="${tpl.id}" type="checkbox" />
+                  <span>${templateDisplayName(tpl)}</span>
+                </label>
+                <select class="group-template-order rounded-lg border border-slate-200 px-2 py-1 text-xs" data-template-id="${tpl.id}">
+                  ${options}
+                </select>
+              </div>
+            `
+          )
+          .join("");
+      }
+
+      function renderGroups() {
+        if (!groups.length) {
+          groupList.innerHTML = "<li>No hay grupos creados.</li>";
+          groupSelect.innerHTML = "<option value=\"\">Selecciona un grupo...</option>";
+          if (activeGroupChip) activeGroupChip.textContent = "Grupo seleccionado: Ninguno";
+          return;
+        }
+        groupList.innerHTML = groups
+          .map((group) => {
+            const names = (group.items || [])
+              .map((item) => item.template?.name || "Plantilla")
+              .join(", ");
+            const isSelected = group.id === selectedGroupId;
+            return `
+              <li class="group-row flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-2 py-2 text-sm ${isSelected ? "bg-slate-50" : "hover:bg-slate-50"}" data-id="${group.id}">
+                <span>
+                  <span class="font-semibold">${group.name}</span>
+                  <span class="text-xs text-slate-500"> (${names})</span>
+                </span>
+                <div class="flex items-center gap-2">
+                  <button class="text-xs font-semibold text-primary underline select-group" data-id="${group.id}">
+                    Usar este grupo
+                  </button>
+                  <button class="text-red-500 text-xs underline delete-group" data-id="${group.id}">Eliminar</button>
+                </div>
+              </li>
+            `;
+          })
+          .join("");
+        groupSelect.innerHTML = [
+          '<option value="">Selecciona un grupo...</option>',
+          ...groups.map((group) => `<option value="${group.id}">${group.name}</option>`),
+        ].join("");
+        if (!selectedGroupId && groups[0]) {
+          groupSelect.value = groups[0].id;
+          setSelectedGroup(groups[0].id);
+        }
+        groupList.querySelectorAll(".select-group").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const id = btn.dataset.id;
+            if (!id) return;
+            setMode("group");
+            groupSelect.value = id;
+            setSelectedGroup(id);
+          });
+        });
+        groupList.querySelectorAll(".group-row").forEach((row) => {
+          row.addEventListener("click", (event) => {
+            if (event.target.closest(".delete-group") || event.target.closest(".select-group")) return;
+            const id = row.dataset.id;
+            if (!id) return;
+            setMode("group");
+            groupSelect.value = id;
+            setSelectedGroup(id);
+          });
+        });
+        groupList.querySelectorAll(".delete-group").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = btn.dataset.id;
+            if (!id) return;
+            const confirmed = window.confirm("Eliminar grupo? No borra las plantillas.");
+            if (!confirmed) return;
+            try {
+              const res = await fetch(`${apiBase}/v1/template-groups/${id}`, {
+                method: "DELETE",
+                headers: { "content-type": "application/json" },
+              });
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) {
+                groupMessage.textContent = data.error || "No se pudo eliminar el grupo.";
+                return;
+              }
+              groups = groups.filter((g) => g.id !== id);
+              if (selectedGroupId === id) {
+                selectedGroupId = "";
+              }
+              renderGroups();
+            } catch (error) {
+              groupMessage.textContent = "Error de red al eliminar el grupo.";
+            }
+          });
+        });
+        templateList.querySelectorAll(".deactivate-template").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = btn.dataset.id;
+            if (!id) return;
+            const confirmed = window.confirm("Desactivar plantilla? No se podra usar en nuevos lotes.");
+            if (!confirmed) return;
+            try {
+              const res = await fetch(`${apiBase}/v1/templates/${id}`, {
+                method: "PATCH",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ role: storedRole || "ADMIN", status: "inactive" }),
+              });
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) {
+                batchMessage.textContent = data.error || "No se pudo desactivar la plantilla.";
+                return;
+              }
+              templates = templates.filter((t) => t.id !== id);
+              if (selectedTemplateId === id) {
+                selectedTemplateId = "";
+              }
+              renderTemplates();
+            } catch (error) {
+              batchMessage.textContent = "Error de red al desactivar plantilla.";
+            }
+          });
+        });
+      }
+
       async function loadTemplates() {
         if (!storedOrgId) return;
         try {
@@ -281,54 +657,188 @@
             `${apiBase}/v1/templates?organizationId=${storedOrgId}&role=${encodeURIComponent(storedRole || "ADMIN")}`
           );
           const data = await res.json();
-          if (!data.items || data.items.length === 0) {
-            templateList.innerHTML = "<li>No hay plantillas cargadas.</li>";
-            return;
-          }
-          templateList.innerHTML = data.items
-            .map((tpl) => `<li>${tpl.name} (${tpl.type})</li>`)
-            .join("");
+          templates = Array.isArray(data.items) ? data.items : [];
+          renderTemplates();
         } catch (error) {
           templateList.innerHTML = "<li>No se pudo cargar la lista.</li>";
         }
       }
 
+      async function loadGroups() {
+        if (!storedOrgId) return;
+        try {
+          const res = await fetch(
+            `${apiBase}/v1/template-groups?organizationId=${storedOrgId}&role=${encodeURIComponent(storedRole || "ADMIN")}`
+          );
+          const data = await res.json();
+          groups = Array.isArray(data.items) ? data.items : [];
+          renderGroups();
+        } catch (error) {
+          groupList.innerHTML = "<li>No se pudo cargar la lista.</li>";
+        }
+      }
+
       templateInput.addEventListener("change", async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-        templateName.textContent = `Plantilla cargada: ${file.name}`;
+        const files = Array.from(event.target.files || []);
+        if (!files.length) return;
+        templateName.textContent = `Plantillas seleccionadas: ${files.length}`;
 
         if (!storedOrgId) {
           templateName.textContent = "No hay organizacion asociada al usuario.";
           return;
         }
 
-        const form = new FormData();
-        form.append("organizationId", storedOrgId);
-        form.append("role", storedRole || "ADMIN");
-        form.append("name", templateNameInput.value || file.name);
-        form.append("file", file);
+        const useInputName = files.length === 1 && templateNameTouched && templateNameInput.value.trim();
+        let successCount = 0;
+        let failCount = 0;
+        let lastError = "";
+        for (const file of files) {
+          const form = new FormData();
+          form.append("organizationId", storedOrgId);
+          form.append("role", storedRole || "ADMIN");
+          const nameValue = useInputName ? templateNameInput.value.trim() : file.name;
+          form.append("name", nameValue);
+          form.append("file", file);
+
+          try {
+            const res = await fetch(`${apiBase}/v1/templates`, {
+              method: "POST",
+              body: form,
+            });
+            const data = await res.json();
+            if (res.ok && data.template) {
+              templateName.textContent = `Plantilla subida: ${data.template.name}`;
+              const placeholders = data.template.placeholders || [];
+              currentPlaceholders = placeholders.length ? placeholders : currentPlaceholders;
+            if (placeholderList) {
+              placeholderList.innerHTML = placeholders.length
+                ? placeholders.map((p) => `<li>{{${p}}}</li>`).join("")
+                : "<li>No se detectaron placeholders.</li>";
+            }
+              templates = [data.template, ...templates];
+              selectedTemplateId = data.template.id;
+              renderTemplates();
+              templateSelect.value = data.template.id;
+              setSelectedTemplate(data.template.id);
+              renderMapping();
+              successCount += 1;
+            } else if (data.error === "template_name_exists") {
+              lastError = `Ya existe una plantilla con ese nombre: ${nameValue}`;
+              failCount += 1;
+            } else {
+              lastError = data.error || `Error al subir plantilla: ${file.name}`;
+              failCount += 1;
+            }
+          } catch (error) {
+            lastError = `Error al conectar con la API: ${file.name}`;
+            failCount += 1;
+          }
+        }
+        if (successCount || failCount) {
+          await loadTemplates();
+          templateName.textContent = `Subidas: ${successCount} ok, ${failCount} con error.${lastError ? " " + lastError : ""}`;
+        }
+      });
+
+      createGroupBtn.addEventListener("click", async () => {
+        groupMessage.textContent = "";
+        if (!storedOrgId) {
+          groupMessage.textContent = "No hay organizacion asociada al usuario.";
+          return;
+        }
+        const name = String(groupNameInput.value || "").trim();
+        if (!name) {
+          groupMessage.textContent = "Ingresa un nombre para el grupo.";
+          return;
+        }
+        const checks = Array.from(document.querySelectorAll(".group-template-check")).filter((c) => c.checked);
+        if (!checks.length) {
+          groupMessage.textContent = "Selecciona al menos una plantilla.";
+          return;
+        }
+        if (checks.length > 4) {
+          groupMessage.textContent = "El grupo admite maximo 4 plantillas.";
+          return;
+        }
+        const items = checks
+          .map((check) => {
+            const templateId = check.dataset.templateId;
+            const orderSelect = document.querySelector(`.group-template-order[data-template-id="${templateId}"]`);
+            const order = orderSelect ? Number(orderSelect.value) || 0 : 0;
+            return { templateId, order };
+          })
+          .sort((a, b) => a.order - b.order);
 
         try {
-          const res = await fetch(`${apiBase}/v1/templates`, {
+          const res = await fetch(`${apiBase}/v1/template-groups`, {
             method: "POST",
-            body: form,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              organizationId: storedOrgId,
+              role: storedRole || "ADMIN",
+              name,
+              items,
+            }),
           });
           const data = await res.json();
-          if (res.ok && data.template) {
-            templateName.textContent = `Plantilla subida: ${data.template.name}`;
-            const placeholders = data.template.placeholders || [];
-            currentPlaceholders = placeholders.length ? placeholders : currentPlaceholders;
-            placeholderList.innerHTML = placeholders.length
-              ? placeholders.map((p) => `<li>{{${p}}}</li>`).join("")
-              : "<li>No se detectaron placeholders.</li>";
-            loadTemplates();
-            renderMapping();
-          } else {
-            templateName.textContent = "Error al subir plantilla.";
+          if (!res.ok) {
+            groupMessage.textContent = data.error || "No se pudo crear el grupo.";
+            return;
           }
+          groupMessage.textContent = "Grupo creado.";
+          groupNameInput.value = "";
+          await loadGroups();
         } catch (error) {
-          templateName.textContent = "Error al conectar con la API.";
+          groupMessage.textContent = "Error de red al crear el grupo.";
+        }
+      });
+
+      updateGroupBtn.addEventListener("click", async () => {
+        groupMessage.textContent = "";
+        if (!storedOrgId) {
+          groupMessage.textContent = "No hay organizacion asociada al usuario.";
+          return;
+        }
+        if (!selectedGroupId) {
+          groupMessage.textContent = "Selecciona un grupo para actualizar.";
+          return;
+        }
+        const checks = Array.from(document.querySelectorAll(".group-template-check")).filter((c) => c.checked);
+        if (!checks.length) {
+          groupMessage.textContent = "Selecciona al menos una plantilla.";
+          return;
+        }
+        if (checks.length > 4) {
+          groupMessage.textContent = "El grupo admite maximo 4 plantillas.";
+          return;
+        }
+        const items = checks
+          .map((check) => {
+            const templateId = check.dataset.templateId;
+            const orderSelect = document.querySelector(`.group-template-order[data-template-id="${templateId}"]`);
+            const order = orderSelect ? Number(orderSelect.value) || 0 : 0;
+            return { templateId, order };
+          })
+          .sort((a, b) => a.order - b.order);
+
+        try {
+          const res = await fetch(`${apiBase}/v1/template-groups/${selectedGroupId}`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              role: storedRole || "ADMIN",
+              items,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            groupMessage.textContent = data.error || "No se pudo actualizar el grupo.";
+            return;
+          }
+          groupMessage.textContent = "Grupo actualizado.";
+          await loadGroups();
+        } catch (error) {
+          groupMessage.textContent = "Error de red al actualizar el grupo.";
         }
       });
 
@@ -347,10 +857,195 @@
 
       selectAllBtn.addEventListener("click", () => setAllSelections(true));
       selectNoneBtn.addEventListener("click", () => setAllSelections(false));
+      templateSelect.addEventListener("change", (event) => {
+        setSelectedTemplate(event.target.value);
+      });
+      groupSelect.addEventListener("change", (event) => {
+        setMode("group");
+        setSelectedGroup(event.target.value);
+      });
+      modeTemplateBtn.addEventListener("click", () => setMode("template"));
+      modeGroupBtn.addEventListener("click", () => setMode("group"));
+      downloadExcelBtn.addEventListener("click", () => {
+        if (useGroupMode) {
+          if (!selectedGroupId) {
+            batchMessage.textContent = "Selecciona un grupo para descargar el Excel.";
+            return;
+          }
+          const url = `${apiBase}/v1/template-groups/${selectedGroupId}/excel?organizationId=${encodeURIComponent(
+            storedOrgId || ""
+          )}&role=${encodeURIComponent(storedRole || "ADMIN")}`;
+          window.location.href = url;
+          return;
+        }
+        if (!selectedTemplateId) {
+          batchMessage.textContent = "Selecciona una plantilla para descargar el Excel.";
+          return;
+        }
+        const url = `${apiBase}/v1/templates/${selectedTemplateId}/excel?organizationId=${encodeURIComponent(
+          storedOrgId || ""
+        )}&role=${encodeURIComponent(storedRole || "ADMIN")}`;
+        window.location.href = url;
+      });
+
+      function guessRowLabel(row) {
+        if (!row || typeof row !== "object") return "Registro";
+        const pick = (keys) => {
+          for (const key of keys) {
+            if (row[key]) return row[key];
+          }
+          return "";
+        };
+        return (
+          pick(["persona1_nombre", "persona1_no", "nombre_estudiante", "representante"]) ||
+          pick(["persona2_nombre", "persona2_no"]) ||
+          "Registro"
+        );
+      }
+
+      function renderFiles(items) {
+        if (!items.length) {
+          filesList.innerHTML = "<div class=\"text-sm text-slate-500\">No se encontraron archivos.</div>";
+          return;
+        }
+        filesList.innerHTML = items
+          .map((item) => {
+            const label = guessRowLabel(item.row);
+            if (item.requests) {
+              const links = item.requests
+                .map((req) => {
+                  const pdfLink = req.pdfUrl
+                    ? `<a class=\"inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-white\" href=\"${apiBase}${req.pdfUrl}\" target=\"_blank\">Ver PDF</a>`
+                    : "<span class=\"text-xs text-slate-400\">PDF pendiente</span>";
+                  return `
+                    <div class=\"flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs\">
+                      <span class=\"font-semibold\">${req.templateName}</span>
+                      ${pdfLink}
+                    </div>
+                  `;
+                })
+                .join("");
+              return `
+                <div class=\"rounded-xl border border-slate-200 bg-white p-3\">
+                  <div class=\"text-sm font-semibold\">#${item.index + 1} · ${label}</div>
+                  <div class=\"mt-2 space-y-1\">${links}</div>
+                </div>
+              `;
+            }
+            const pdfLink = item.request?.pdfUrl
+              ? `<a class=\"inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-white\" href=\"${apiBase}${item.request.pdfUrl}\" target=\"_blank\">Ver PDF</a>`
+              : "<span class=\"text-xs text-slate-400\">PDF pendiente</span>";
+            return `
+              <div class=\"rounded-xl border border-slate-200 bg-white p-3\">
+                <div class=\"text-sm font-semibold\">#${item.index + 1} · ${label}</div>
+                <div class=\"mt-2\">${pdfLink}</div>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      loadFilesBtn.addEventListener("click", async () => {
+        filesMessage.textContent = "";
+        if (!lastBatchId) {
+          filesMessage.textContent = "Aun no hay lote procesado en esta sesion.";
+          return;
+        }
+        const endpoint =
+          lastBatchMode === "group"
+            ? `/v1/batch-groups/${lastBatchId}/requests-detail`
+            : `/v1/batches/${lastBatchId}/requests-detail`;
+        try {
+          const res = await fetch(`${apiBase}${endpoint}`);
+          const data = await res.json();
+          if (!res.ok) {
+            filesMessage.textContent = data.error || "No se pudo cargar archivos.";
+            return;
+          }
+          renderFiles(Array.isArray(data.items) ? data.items : []);
+        } catch (error) {
+          filesMessage.textContent = "Error de red al cargar archivos.";
+        }
+      });
+
+      function autoMapPlaceholders() {
+        document.querySelectorAll("#mapping-grid select").forEach((select) => {
+          const placeholder = select.dataset.placeholder;
+          if (!placeholder) return;
+          const normalizedHeaders = currentHeaders.map((h) => h.trim());
+          const headerLower = normalizedHeaders.map((h) => h.toLowerCase());
+          const placeholderLower = placeholder.toLowerCase();
+          const exactIndex = headerLower.indexOf(placeholderLower);
+          if (exactIndex >= 0) {
+            select.value = normalizedHeaders[exactIndex];
+            return;
+          }
+          const aliasMap = {
+            nombre: ["nombre", "no"],
+            apellido: ["apellido", "ap"],
+            cedula: ["cedula", "ce"],
+            email: ["email", "em", "correo"],
+            celular: ["celular", "cel", "telefono", "tel"],
+          };
+          const parts = placeholderLower.split("_");
+          if (parts.length >= 2) {
+            const prefix = parts[0];
+            const suffix = parts.slice(1).join("_");
+            const aliases = aliasMap[suffix] || [suffix];
+            for (const alias of aliases) {
+              const candidate = `${prefix}_${alias}`;
+              const idx = headerLower.indexOf(candidate);
+              if (idx >= 0) {
+                select.value = normalizedHeaders[idx];
+                return;
+              }
+            }
+          }
+        });
+      }
+
+      function validatePlaceholders() {
+        if (useGroupMode && !selectedGroupId) {
+          if (activeGroupChip) activeGroupChip.textContent = "Grupo seleccionado: Ninguno";
+          processBatchBtn.disabled = true;
+          processBatchBtn.classList.add("opacity-60", "cursor-not-allowed");
+          return;
+        }
+        if (!useGroupMode && !selectedTemplateId) {
+          processBatchBtn.disabled = true;
+          processBatchBtn.classList.add("opacity-60", "cursor-not-allowed");
+          return;
+        }
+        if (!currentPlaceholders.length) return;
+        const missing = [];
+        document.querySelectorAll("#mapping-grid select").forEach((select) => {
+          if (!select.value) {
+            missing.push(select.dataset.placeholder);
+            select.classList.add("border-red-300");
+          } else {
+            select.classList.remove("border-red-300");
+          }
+        });
+        if (missing.length) {
+          batchMessage.textContent = `Faltan columnas para: ${missing.join(", ")}`;
+          processBatchBtn.disabled = true;
+          processBatchBtn.classList.add("opacity-60", "cursor-not-allowed");
+        } else {
+          batchMessage.textContent = "";
+          processBatchBtn.disabled = false;
+          processBatchBtn.classList.remove("opacity-60", "cursor-not-allowed");
+        }
+      }
 
       function renderMapping() {
-        if (!currentHeaders.length || !currentPlaceholders.length) {
+        if (!currentHeaders.length) {
           mappingGrid.innerHTML = "<div class=\"text-sm text-slate-500\">Carga un Excel para mapear columnas.</div>";
+          return;
+        }
+        if (!currentPlaceholders.length) {
+          mappingGrid.innerHTML = `<div class="text-sm text-slate-500">${
+            useGroupMode ? "Selecciona un grupo para mapear placeholders." : "Selecciona una plantilla para mapear placeholders."
+          }</div>`;
           return;
         }
         mappingGrid.innerHTML = currentPlaceholders
@@ -358,9 +1053,11 @@
             const options = currentHeaders
               .map((h) => `<option value=\"${h}\">${h}</option>`)
               .join("");
+            const usedBy = placeholderUsage[ph] ? `<span class="text-xs text-slate-400">Usado en: ${placeholderUsage[ph].join(", ")}</span>` : "";
             return `
               <label class=\"flex flex-col gap-2 text-sm\">
                 <span class=\"text-slate-600\">{{${ph}}}</span>
+                ${usedBy}
                 <select class=\"rounded-lg border border-slate-200 px-3 py-2\" data-placeholder=\"${ph}\">
                   <option value=\"\">Selecciona columna...</option>
                   ${options}
@@ -369,6 +1066,8 @@
             `;
           })
           .join("");
+        autoMapPlaceholders();
+        validatePlaceholders();
       }
 
       function renderRows(rows) {
@@ -398,6 +1097,9 @@
         const file = event.target.files[0];
         if (!file) return;
         fileName.textContent = `Archivo seleccionado: ${file.name}`;
+        batchLocked = false;
+        processBatchBtn.disabled = false;
+        processBatchBtn.classList.remove("opacity-60", "cursor-not-allowed");
 
         if (file.name.endsWith(".csv")) {
           const reader = new FileReader();
@@ -405,8 +1107,16 @@
             const lines = reader.result.trim().split("\n");
             currentHeaders = lines[0].split(",").map((h) => h.trim());
             const rows = lines.slice(1).map((line) => line.split(","));
+            currentRows = rows.map((row) => {
+              const obj = {};
+              currentHeaders.forEach((h, i) => {
+                obj[h] = row[i];
+              });
+              return obj;
+            });
             renderRows(rows);
             renderMapping();
+            validatePlaceholders();
           };
           reader.readAsText(file);
           return;
@@ -422,10 +1132,99 @@
             const sheetRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
             currentHeaders = (sheetRows[0] || []).map((h) => String(h).trim());
             const rows = sheetRows.slice(1);
+            currentRows = rows.map((row) => {
+              const obj = {};
+              currentHeaders.forEach((h, i) => {
+                obj[h] = row[i];
+              });
+              return obj;
+            });
             renderRows(rows);
             renderMapping();
+            validatePlaceholders();
           };
           reader.readAsArrayBuffer(file);
+        }
+      });
+
+      processBatchBtn.addEventListener("click", async () => {
+        batchMessage.textContent = "";
+        if (batchLocked) {
+          batchMessage.textContent = "Ya hay un lote en proceso. Sube otro Excel para crear uno nuevo.";
+          return;
+        }
+        if (!storedOrgId || (!useGroupMode && !selectedTemplateId) || (useGroupMode && !selectedGroupId)) {
+          batchMessage.textContent = useGroupMode ? "Selecciona un grupo primero." : "Selecciona una plantilla primero.";
+          return;
+        }
+        if (!currentRows.length) {
+          batchMessage.textContent = "Carga un Excel antes de procesar.";
+          return;
+        }
+
+        const mapping = {};
+        const missing = [];
+        document.querySelectorAll("#mapping-grid select").forEach((select) => {
+          const placeholder = select.dataset.placeholder;
+          const column = select.value;
+          if (!column) missing.push(placeholder);
+          else mapping[placeholder] = column;
+        });
+        if (missing.length) {
+          batchMessage.textContent = `Faltan columnas para: ${missing.join(", ")}`;
+          return;
+        }
+
+        const mappedRows = currentRows.map((row) => {
+          const mapped = {};
+          Object.entries(mapping).forEach(([ph, col]) => {
+            mapped[ph] = row[col] ?? "";
+          });
+          return mapped;
+        });
+
+        processBatchBtn.disabled = true;
+        processBatchBtn.classList.add("opacity-60", "cursor-not-allowed");
+        try {
+          batchMessage.textContent = "Procesando lote...";
+          const endpoint = useGroupMode ? "/v1/batch-groups/start" : "/v1/batches/start";
+          const payload = {
+            organizationId: storedOrgId,
+            columns: Object.keys(mapping),
+            mapping,
+            rows: mappedRows,
+          };
+          if (useGroupMode) {
+            payload.groupId = selectedGroupId;
+          } else {
+            payload.templateId = selectedTemplateId;
+          }
+          const res = await fetch(`${apiBase}${endpoint}`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            batchMessage.textContent = data.missing ? `Faltan columnas: ${data.missing.join(", ")}` : data.error || "No se pudo crear el lote.";
+            processBatchBtn.disabled = false;
+            processBatchBtn.classList.remove("opacity-60", "cursor-not-allowed");
+            return;
+          }
+          const batchId = data.batchId || "";
+          lastBatchId = batchId;
+          lastBatchMode = useGroupMode ? "group" : "template";
+          batchLocked = true;
+          processBatchBtn.disabled = true;
+          processBatchBtn.classList.add("opacity-60", "cursor-not-allowed");
+          batchMessage.textContent = `Lote creado: ${batchId}. Se procesara internamente.`;
+        } catch (error) {
+          batchMessage.textContent = "Error de red al crear el lote.";
+        } finally {
+          if (!batchLocked) {
+            processBatchBtn.disabled = false;
+            processBatchBtn.classList.remove("opacity-60", "cursor-not-allowed");
+          }
         }
       });
 
@@ -434,6 +1233,8 @@
       });
       updateSelectedCount();
       loadTemplates();
+      loadGroups();
+      setMode("template");
     </script>
   </body>
 </html>

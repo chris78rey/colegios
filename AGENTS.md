@@ -1,36 +1,44 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `services/api/`: Node.js HTTP API service (ESM). Entry point: `services/api/src/index.js`. Prisma schema lives in `services/api/prisma/schema.prisma`.
-- `services/worker/`: Background worker service (ESM). Entry point: `services/worker/src/index.js`.
-- `docs/`: Architecture and domain notes (see `docs/architecture.md`).
-- `scripts/`: Utility scripts (e.g., `scripts/healthcheck.sh`).
-- `docker-compose.yml`: Local orchestration for `api`, `worker`, `postgres`, `redis`.
+- `web/`: Static frontend (login, admin, superadmin pages). Served by nginx in compose.
+- `services/api/`: Node.js ESM API. Entry: `services/api/src/index.js`. Prisma schema in `services/api/prisma/schema.prisma`.
+- `services/worker/`: Background worker service (ESM).
+- `data/`: Persistent storage (Postgres data and uploaded files). Do not commit.
+- `plantillas/`: Reference templates used by the UI and examples.
+- `docs/`, `scripts/`: Documentation and utilities (e.g., `scripts/healthcheck.sh`).
 
 ## Build, Test, and Development Commands
-- `docker compose up -d postgres redis`: Start databases for local development.
-- `docker compose up --build`: Build and run all services locally.
-- `npm install`: Install dependencies (run inside `services/api` or `services/worker`).
-- `npm run dev`: Start a service in watch mode (run from each service folder).
-- `npm run start`: Start a service without watch mode.
-- `npm run prisma:generate`: Generate Prisma client (API only).
-- `npm run prisma:migrate`: Run local Prisma migrations (API only).
-- `scripts/healthcheck.sh`: Quick service health check.
+- `docker compose up --build`: Build and run `api`, `worker`, `web`, `postgres`, `redis`.
+- `docker compose up -d postgres redis`: Start only databases.
+- `docker compose up -d --build api worker`: Rebuild backend services.
+- `docker compose logs -f api`: Follow API logs.
+- `scripts/healthcheck.sh`: Basic service health check.
+- `npm install` then `npm run dev`: Run a service locally (inside `services/api` or `services/worker`).
 
 ## Coding Style & Naming Conventions
-- Use ESM modules, double quotes, semicolons, and 2-space indentation (match `services/*/src/index.js`).
-- Keep modules small; prefer explicit function names over anonymous callbacks for complex logic.
-- HTTP routes should be versioned under `/v1/...`.
+- ESM modules, 2-space indentation, double quotes, semicolons.
+- All HTTP routes are versioned under `/v1/...`.
+- Use `status` fields for soft deletes (e.g., `active`/`inactive`) instead of hard deletes.
+- Keep Prisma model names singular (`Organization`, `User`, `Template`).
 
 ## Testing Guidelines
-- No automated test framework is configured yet. If you add one, document it here and add a `npm run test` script.
-- Name tests by feature area (e.g., `requests.test.js`) and keep them close to the service they cover.
+- No automated tests yet. If you add tests, include `npm run test` and document the framework here.
+- Manual checks: login flow, superadmin management, admin upload/preview.
 
 ## Commit & Pull Request Guidelines
-- Git history is empty, so no established commit message convention yet. Use short, imperative summaries (e.g., "Add request queue handler").
-- PRs should include a clear description of the change and why it is needed, steps to verify (commands and expected results), and screenshots or sample payloads for API/UX changes when relevant.
+- Existing commits use short imperative summaries: `Add ...`, `Fix ...`, `Update ...`.
+- PRs should include: purpose, verification steps (commands + expected result), and screenshots for UI changes.
 
-## Security & Configuration Tips
-- Secrets should not be hard-coded. Use environment variables and `.env` files locally (do not commit secrets).
-- Common variables are defined in `docker-compose.yml` (e.g., `DATABASE_URL`, `REDIS_URL`, `STORAGE_PATH`).
-- Local files are stored under `data/` (mounted in containers). Avoid committing generated data.
+## Configuration & Data
+- Use `.env` for local overrides; never commit secrets.
+- Compose defines `DATABASE_URL`, `REDIS_URL`, `STORAGE_PATH`.
+- Local web runs at `http://localhost:5173` when using compose.
+
+## Skills
+### Available skills
+- colegios-db-evolution: Database evolution runbook for the colegios project. Use when changing Prisma models, adding fields, introducing new tables, or adjusting relationships to ensure additive migrations, data preservation, and a persistent change log from local development. (file: G:/codex_projects/colegios/.codex/skills/colegios-db-evolution/SKILL.md)
+- colegios-lessons-learned: Runbook for Colegio MVP lessons learned. Use when setting up local Docker Compose, fixing Prisma/openssl in containers, generating migrations/seed data, or deploying on VPS/Coolify with Traefik labels and network configuration. (file: G:/codex_projects/colegios/.codex/skills/colegios-lessons-learned/SKILL.md)
+- colegios-omniswitch-envio: Envio de PDFs por registro del Excel hacia OmniSwitch/Firmalo con el flujo de 4 pasos (crear solicitud, cargar documento, registrar firmante, disparar envio). Usar cuando se necesite integrar el pipeline de firma en el proyecto colegios, especialmente al procesar lotes y generar un envio por cada request. (file: G:/codex_projects/colegios/.codex/skills/colegios-omniswitch-envio/SKILL.md)
+- colegios-template-groups: Runbook for multi-template groups (max 4) in colegios: DB models, API endpoints, UI flow, and batch processing. (file: G:/codex_projects/colegios/.codex/skills/colegios-template-groups/SKILL.md)
+- colegios-templates-excel-pdf: Runbook for template ingestion (DOCX/HTML), Excel header generation, and file linking in colegios. (file: G:/codex_projects/colegios/.codex/skills/colegios-templates-excel-pdf/SKILL.md)
