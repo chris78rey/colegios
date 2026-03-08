@@ -39,11 +39,20 @@ Standardize how groups of up to 4 templates are created, edited, and processed a
 
 ## UI Flow (Admin Colegio)
 - Screen: `web/admin/upload.html`
-- **Mode toggle**: `Plantilla unica` vs `Grupo de plantillas`
+- **Mode toggle**: `Plantilla unica` vs `Grupo de plantillas` as a pill toggle with clear active state.
 - **Crear grupo**: Select up to 4 templates + ordering
-- **Editar grupo**: Select a group, adjust template checks/order, click `Actualizar grupo seleccionado`
+- **Editar grupo**: Select a group (card or dropdown), adjust template checks/order, click `Actualizar grupo seleccionado`
 - **Mapping**: Union of placeholders across templates; per-placeholder "Usado en: ..." hints
 - **Batch start**: in group mode calls `/v1/batch-groups/start`, else legacy `/v1/batches/start`
+## UX Guardrails
+- Show group cards with clear **Seleccionar** and **Eliminar** buttons; whole row is clickable but buttons remain primary affordances.
+- Keep group selection and Excel download in the same section to reduce context switching.
+- Upload flow is split into **tabs**:
+  - Plantillas
+  - Excel y Mapeo
+  - Preview y Procesar
+  - Archivos
+- Tabs are **gated by state** (template/group selected → Excel uploaded → batch created).
 
 ## Placeholder/Signatory Rules
 - If placeholders contain `persona1_*`, build signatory from `persona1_*` columns.

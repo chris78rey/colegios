@@ -42,10 +42,12 @@ Standardize DOCX/HTML template handling, Excel header generation from placeholde
 - `pdfUrl` / `docxUrl` are **relative** (`/v1/files?...`); UI must prefix with `apiBase`.
 
 ## UI Notes (Admin Colegio)
-- `Descargar Excel de carga` button uses `/excel` endpoints (template or group).
+- `Descargar Excel de carga` is a **primary** CTA in the "Plantilla activa" panel and uses `/excel` endpoints (template or group).
 - Auto-mapping aliases in UI:
   - `nombre -> no`, `apellido -> ap`, `cedula -> ce`, `email -> em`, `celular -> cel`.
 - File list panel loads `requests-detail` and displays per-row links; **always prefix with `apiBase`**.
+- Render file links as **large buttons** (`Ver PDF`) to avoid tiny, hard-to-click anchors.
+- "Ver PDF" opens an **in-page modal** with an embedded viewer (`iframe`), not a new tab.
 - Template name input: only used if user edits it; otherwise use filename (avoids duplicates).
 
 ## Error Handling & Guards

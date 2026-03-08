@@ -178,7 +178,29 @@
         showDebug(`Promise Error: ${event.reason}`);
       });
 
-      const storedEmail = window.localStorage.getItem("auth_email");
+      function requireAuth(allowedRoles) {
+        const email = window.localStorage.getItem("auth_email");
+        const role = window.localStorage.getItem("auth_role");
+        if (!email || !role) {
+          window.localStorage.removeItem("auth_email");
+          window.localStorage.removeItem("auth_role");
+          window.localStorage.removeItem("auth_org_id");
+          window.location.href = "/";
+          return null;
+        }
+        if (allowedRoles && !allowedRoles.includes(role)) {
+          window.localStorage.removeItem("auth_email");
+          window.localStorage.removeItem("auth_role");
+          window.localStorage.removeItem("auth_org_id");
+          window.location.href = "/";
+          return null;
+        }
+        return { email, role };
+      }
+
+      const auth = requireAuth(["SUPER_ADMIN"]);
+
+      const storedEmail = auth?.email || window.localStorage.getItem("auth_email");
       if (storedEmail) document.getElementById("user-email").textContent = storedEmail;
       const apiBase =
         window.API_BASE_URL ||

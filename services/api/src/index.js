@@ -1064,7 +1064,7 @@ const server = http.createServer((req, res) => {
         const organizationId = query.get("organizationId");
         const sort = query.get("sort");
         const order = query.get("order") === "desc" ? "desc" : "asc";
-        const where = organizationId ? { organizationId, status: "active" } : { status: "active" };
+        const where = organizationId ? { organizationId } : {};
         const orderBy =
           sort === "org"
             ? [{ organizationId: order }, { email: order }]
@@ -1079,6 +1079,7 @@ const server = http.createServer((req, res) => {
         });
         return json(res, 200, { items: users });
       } catch (error) {
+        console.error("users_failed", error);
         return json(res, 500, { error: "users_failed" });
       }
     })();
@@ -1258,7 +1259,7 @@ const server = http.createServer((req, res) => {
         if (!organizationId && role !== "SUPER_ADMIN") {
           return json(res, 400, { error: "organization_required" });
         }
-        const where = organizationId ? { organizationId, status: "active" } : { status: "active" };
+        const where = organizationId ? { organizationId } : {};
         const templates = await prisma.template.findMany({
           where,
           orderBy: { createdAt: "desc" },
@@ -1611,7 +1612,7 @@ const server = http.createServer((req, res) => {
         if (!organizationId && role !== "SUPER_ADMIN") {
           return json(res, 400, { error: "organization_required" });
         }
-        const where = organizationId ? { organizationId, status: "active" } : { status: "active" };
+        const where = organizationId ? { organizationId } : {};
         const groups = await prisma.templateGroup.findMany({
           where,
           orderBy: { createdAt: "desc" },

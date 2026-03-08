@@ -38,6 +38,14 @@
         },
       };
     </script>
+    <style>
+      body {
+        background:
+          radial-gradient(1200px 600px at 10% -10%, rgba(25, 127, 230, 0.12), transparent 55%),
+          radial-gradient(900px 500px at 90% 0%, rgba(14, 165, 233, 0.1), transparent 60%),
+          #f6f7f8;
+      }
+    </style>
   </head>
   <body class="bg-mist font-display text-ink">
     <div class="min-h-screen">
@@ -61,74 +69,116 @@
       </header>
 
       <main class="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
-        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
-          <h2 class="text-xl font-bold">1. Plantilla Word o HTML con placeholders</h2>
-          <p class="mt-2 text-sm text-slate-500">
-            Sube tu plantilla .docx o .html con placeholders tipo <span class="font-semibold">{{nombre_estudiante}}</span>.
-            En esta etapa solo mostramos un ejemplo y la vista previa.
-          </p>
-          <div class="mt-4 flex flex-wrap items-center gap-3">
-            <input
-              class="rounded-xl border border-slate-200 px-3 py-2 text-sm"
-              id="template-name-input"
-              placeholder="Nombre de plantilla"
-              type="text"
-              value="Solicitud Matricula"
-            />
-            <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600">
-              <span class="material-symbols-outlined text-sm">upload_file</span>
-              Subir plantilla(s)
-              <input class="hidden" id="template-input" type="file" accept=".docx,.html,.htm" multiple />
-            </label>
+        <div class="rounded-2xl border border-slate-200 bg-white p-3 shadow-soft">
+          <div class="flex flex-wrap items-center gap-2">
+            <button class="tab-btn rounded-full px-4 py-2 text-sm font-semibold text-slate-600" data-tab-button="plantillas" type="button">
+              Plantillas
+            </button>
+            <button class="tab-btn rounded-full px-4 py-2 text-sm font-semibold text-slate-600" data-tab-button="excel" type="button">
+              Excel y Mapeo
+            </button>
+            <button class="tab-btn rounded-full px-4 py-2 text-sm font-semibold text-slate-600" data-tab-button="preview" type="button">
+              Preview y Procesar
+            </button>
+            <button class="tab-btn rounded-full px-4 py-2 text-sm font-semibold text-slate-600" data-tab-button="files" type="button">
+              Archivos
+            </button>
           </div>
-          <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Plantilla lista</p>
-            <p class="mt-2 text-sm text-slate-600">
-              Descarga el Excel de carga para obtener los encabezados y llenar los datos.
-            </p>
-          </div>
-          <p class="mt-4 text-xs text-slate-400" id="template-name">Ninguna plantilla subida.</p>
-          <div class="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Plantillas disponibles</p>
-            <div class="mt-3 flex flex-wrap items-center gap-3">
-              <select class="rounded-lg border border-slate-200 px-3 py-2 text-sm" id="template-select">
-                <option value="">Selecciona una plantilla...</option>
-              </select>
-              <ul class="text-sm text-slate-700" id="template-list">
-                <li>No hay plantillas cargadas.</li>
-              </ul>
+          <div class="mt-2 hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700" id="tab-message"></div>
+        </div>
+
+        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft" data-tab-panel="plantillas">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h2 class="text-xl font-bold">1. Plantilla Word o HTML con placeholders</h2>
+              <p class="mt-2 text-sm text-slate-500">
+                Sube tu plantilla .docx o .html con placeholders tipo <span class="font-semibold">{{nombre_estudiante}}</span>.
+                Aqui solo mostramos un ejemplo y la vista previa.
+              </p>
             </div>
-            <div class="mt-4 flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center gap-3">
               <span class="text-xs uppercase tracking-[0.2em] text-slate-400">Modo de lote</span>
-              <button
-                class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600"
-                id="mode-template"
-                type="button"
-              >
-                Plantilla unica
-              </button>
-              <button
-                class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600"
-                id="mode-group"
-                type="button"
-              >
-                Grupo de plantillas
-              </button>
-              <span class="ml-2 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600" id="active-group-chip">
+              <div class="flex items-center rounded-full bg-slate-100 p-1">
+                <button
+                  class="rounded-full px-4 py-1 text-xs font-semibold text-slate-600 transition"
+                  id="mode-template"
+                  type="button"
+                >
+                  Plantilla unica
+                </button>
+                <button
+                  class="rounded-full px-4 py-1 text-xs font-semibold text-slate-600 transition"
+                  id="mode-group"
+                  type="button"
+                >
+                  Grupo de plantillas
+                </button>
+              </div>
+              <span class="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white" id="active-group-chip">
                 Grupo seleccionado: Ninguno
               </span>
             </div>
           </div>
-          <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+
+          <div class="mt-5 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Sube y nombra tu plantilla</p>
+              <div class="mt-3 flex flex-wrap items-center gap-3">
+                <input
+                  class="min-w-[240px] flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  id="template-name-input"
+                  placeholder="Nombre de plantilla"
+                  type="text"
+                  value="Solicitud Matricula"
+                />
+                <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm">
+                  <span class="material-symbols-outlined text-sm">upload_file</span>
+                  Subir plantilla(s)
+                  <input class="hidden" id="template-input" type="file" accept=".docx,.html,.htm" multiple />
+                </label>
+              </div>
+              <p class="mt-3 text-xs text-slate-400" id="template-name">Ninguna plantilla subida.</p>
+              <div class="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Plantilla activa</p>
+                <p class="mt-2 text-sm text-slate-600">
+                  Descarga el Excel de carga para obtener los encabezados y llenar los datos.
+                </p>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm"
+                    id="download-excel"
+                    type="button"
+                  >
+                    <span class="material-symbols-outlined text-sm">download</span>
+                    Descargar Excel de carga
+                  </button>
+                  <span class="text-xs text-slate-400">Usa este Excel como plantilla de columnas.</span>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white p-5">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Plantillas disponibles</p>
+              <div class="mt-3 flex flex-wrap items-center gap-3">
+                <select class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" id="template-select">
+                  <option value="">Selecciona una plantilla...</option>
+                </select>
+              </div>
+              <ul class="mt-3 space-y-2 text-sm text-slate-700" id="template-list">
+                <li>No hay plantillas cargadas.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Grupos de plantillas</p>
               <span class="text-xs text-slate-400">Maximo 4 plantillas por grupo</span>
             </div>
-            <div class="mt-3 grid gap-4 lg:grid-cols-2">
+            <div class="mt-4 grid gap-4 lg:grid-cols-2">
               <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <p class="text-sm font-semibold text-slate-700">Crear grupo</p>
                 <input
-                  class="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  class="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                   id="group-name-input"
                   placeholder="Nombre del grupo"
                   type="text"
@@ -146,22 +196,16 @@
                 <p class="mt-2 text-xs text-slate-500" id="group-message"></p>
               </div>
               <div class="rounded-xl border border-slate-200 bg-white p-4">
-                <p class="text-sm font-semibold text-slate-700">Seleccionar grupo</p>
+                <div class="flex items-center justify-between">
+                  <p class="text-sm font-semibold text-slate-700">Seleccionar grupo</p>
+                  <span class="text-xs text-slate-400">Haz clic sobre un grupo para activarlo</span>
+                </div>
                 <select class="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" id="group-select">
                   <option value="">Selecciona un grupo...</option>
                 </select>
-                <ul class="mt-3 space-y-2 text-sm text-slate-700" id="group-list">
+                <ul class="mt-3 space-y-3 text-sm text-slate-700" id="group-list">
                   <li>No hay grupos creados.</li>
                 </ul>
-                <div class="mt-3 flex items-center gap-2">
-                  <button
-                    class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
-                    id="download-excel"
-                    type="button"
-                  >
-                    Descargar Excel de carga
-                  </button>
-                </div>
                 <button
                   class="mt-4 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700"
                   id="update-group"
@@ -172,26 +216,29 @@
               </div>
             </div>
           </div>
-          <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Mapeo Excel -> Placeholders</p>
+        </section>
+
+        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft" data-tab-panel="excel">
+          <h2 class="text-xl font-bold">2. Subir archivo</h2>
+          <p class="mt-2 text-sm text-slate-500">Acepta .xlsx o .csv. Solo se muestra el preview.</p>
+          <label class="mt-4 flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-white px-6 py-10 text-center shadow-sm">
+            <span class="material-symbols-outlined text-4xl text-slate-400">upload_file</span>
+            <span class="text-sm font-semibold">Selecciona tu archivo</span>
+            <input class="hidden" id="file-input" type="file" accept=".csv,.xlsx" />
+          </label>
+          <div class="mt-4 text-sm text-slate-600" id="file-name">Ningun archivo seleccionado.</div>
+          <div class="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
+            <div class="flex items-center justify-between">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Mapeo Excel -> Placeholders</p>
+              <span class="text-xs text-slate-400">Intentamos hacer match automatico por nombre.</span>
+            </div>
             <div class="mt-3 grid gap-3 sm:grid-cols-2" id="mapping-grid">
               <div class="text-sm text-slate-500">Carga un Excel para mapear columnas.</div>
             </div>
           </div>
         </section>
 
-        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
-          <h2 class="text-xl font-bold">2. Subir archivo</h2>
-          <p class="mt-2 text-sm text-slate-500">Acepta .xlsx o .csv. Solo se muestra el preview.</p>
-          <label class="mt-4 flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
-            <span class="material-symbols-outlined text-4xl text-slate-400">upload_file</span>
-            <span class="text-sm font-semibold">Selecciona tu archivo</span>
-            <input class="hidden" id="file-input" type="file" accept=".csv,.xlsx" />
-          </label>
-          <div class="mt-4 text-sm text-slate-600" id="file-name">Ningun archivo seleccionado.</div>
-        </section>
-
-        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
+        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft" data-tab-panel="preview">
           <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 class="text-xl font-bold">3. Preview</h2>
@@ -216,7 +263,7 @@
               <button class="rounded-xl bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-600" disabled>
                 Enviar correos (pendiente)
               </button>
-              <button class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white" id="process-batch" type="button">
+              <button class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm" id="process-batch" type="button">
                 Procesar lote
               </button>
             </div>
@@ -256,14 +303,14 @@
           </div>
         </section>
 
-        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
+        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft" data-tab-panel="files">
           <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 class="text-xl font-bold">4. Archivos generados</h2>
               <p class="text-sm text-slate-500">Relaciona cada archivo con su registro del Excel.</p>
             </div>
             <button
-              class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
+              class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm"
               id="load-files"
               type="button"
             >
@@ -276,6 +323,23 @@
           </div>
         </section>
       </main>
+    </div>
+
+    <div class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4" id="pdf-modal">
+      <div class="flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-soft">
+        <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <div>
+            <p class="text-sm font-semibold text-slate-900">Vista previa PDF</p>
+            <p class="text-xs text-slate-500" id="pdf-modal-title">Documento</p>
+          </div>
+          <button class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600" id="pdf-modal-close">
+            Cerrar
+          </button>
+        </div>
+        <div class="flex-1 bg-slate-100">
+          <iframe class="h-full w-full" id="pdf-modal-frame" title="PDF Viewer"></iframe>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -292,6 +356,29 @@
       window.addEventListener("unhandledrejection", (event) => {
         showDebug(`Promise Error: ${event.reason}`);
       });
+
+      function requireAuth(allowedRoles) {
+        const email = window.localStorage.getItem("auth_email");
+        const role = window.localStorage.getItem("auth_role");
+        const orgId = window.localStorage.getItem("auth_org_id");
+        if (!email || !role || !orgId) {
+          window.localStorage.removeItem("auth_email");
+          window.localStorage.removeItem("auth_role");
+          window.localStorage.removeItem("auth_org_id");
+          window.location.href = "/";
+          return null;
+        }
+        if (allowedRoles && !allowedRoles.includes(role)) {
+          window.localStorage.removeItem("auth_email");
+          window.localStorage.removeItem("auth_role");
+          window.localStorage.removeItem("auth_org_id");
+          window.location.href = "/";
+          return null;
+        }
+        return { email, role, orgId };
+      }
+
+      const auth = requireAuth(["ADMIN"]);
 
       const fileInput = document.getElementById("file-input");
       const fileName = document.getElementById("file-name");
@@ -318,8 +405,16 @@
       const loadFilesBtn = document.getElementById("load-files");
       const filesList = document.getElementById("files-list");
       const filesMessage = document.getElementById("files-message");
+      const pdfModal = document.getElementById("pdf-modal");
+      const pdfModalFrame = document.getElementById("pdf-modal-frame");
+      const pdfModalClose = document.getElementById("pdf-modal-close");
+      const pdfModalTitle = document.getElementById("pdf-modal-title");
       const modeTemplateBtn = document.getElementById("mode-template");
       const modeGroupBtn = document.getElementById("mode-group");
+      const tabMessage = document.getElementById("tab-message");
+      const tabButtons = Array.from(document.querySelectorAll("[data-tab-button]"));
+      const tabPanels = Array.from(document.querySelectorAll("[data-tab-panel]"));
+      let activeTab = "plantillas";
       let currentPlaceholders = ["nombre_estudiante", "representante", "correo", "celular", "institucion"];
       let currentHeaders = [];
       let currentRows = [];
@@ -337,10 +432,10 @@
       const selectNoneBtn = document.getElementById("select-none");
       const selectedCount = document.getElementById("selected-count");
 
-      const storedEmail = window.localStorage.getItem("auth_email");
+      const storedEmail = auth?.email || window.localStorage.getItem("auth_email");
       if (storedEmail) userEmail.textContent = storedEmail;
-      const storedOrgId = window.localStorage.getItem("auth_org_id");
-      const storedRole = window.localStorage.getItem("auth_role");
+      const storedOrgId = auth?.orgId || window.localStorage.getItem("auth_org_id");
+      const storedRole = auth?.role || window.localStorage.getItem("auth_role");
       const apiBase =
         window.API_BASE_URL ||
         (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
@@ -368,6 +463,7 @@
           }
         }
         renderMapping();
+        updateTabStates();
       }
 
       function getGroupPlaceholderInfo(group) {
@@ -420,25 +516,100 @@
           if (activeGroupChip) activeGroupChip.textContent = "Grupo seleccionado: Ninguno";
         }
         renderMapping();
+        updateTabStates();
       }
+
+      function showTabMessage(message) {
+        if (!tabMessage) return;
+        if (!message) {
+          tabMessage.classList.add("hidden");
+          tabMessage.textContent = "";
+          return;
+        }
+        tabMessage.textContent = message;
+        tabMessage.classList.remove("hidden");
+      }
+
+      function updateTabStates() {
+        const hasTemplateOrGroup = useGroupMode ? !!selectedGroupId : !!selectedTemplateId;
+        const hasExcel = currentRows.length > 0;
+        const hasBatch = !!lastBatchId;
+        const states = {
+          plantillas: true,
+          excel: hasTemplateOrGroup,
+          preview: hasExcel,
+          files: hasBatch,
+        };
+        tabButtons.forEach((btn) => {
+          const tab = btn.dataset.tabButton;
+          const enabled = !!states[tab];
+          btn.dataset.enabled = enabled ? "true" : "false";
+          btn.setAttribute("aria-disabled", enabled ? "false" : "true");
+          btn.classList.toggle("opacity-50", !enabled);
+          btn.classList.toggle("cursor-not-allowed", !enabled);
+        });
+        return states;
+      }
+
+      function setActiveTab(tab) {
+        activeTab = tab;
+        tabButtons.forEach((btn) => {
+          const isActive = btn.dataset.tabButton === tab;
+          btn.classList.toggle("bg-slate-900", isActive);
+          btn.classList.toggle("text-white", isActive);
+          btn.classList.toggle("shadow-sm", isActive);
+          if (!isActive) {
+            btn.classList.add("text-slate-600");
+          } else {
+            btn.classList.remove("text-slate-600");
+          }
+        });
+        tabPanels.forEach((panel) => {
+          panel.classList.toggle("hidden", panel.dataset.tabPanel !== tab);
+        });
+      }
+
+      tabButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const tab = btn.dataset.tabButton;
+          const states = updateTabStates();
+          if (!states[tab]) {
+            const message =
+              tab === "excel"
+                ? "Selecciona una plantilla o grupo para continuar."
+                : tab === "preview"
+                ? "Carga un Excel para habilitar el preview."
+                : "Procesa un lote para ver archivos.";
+            showTabMessage(message);
+            return;
+          }
+          showTabMessage("");
+          setActiveTab(tab);
+        });
+      });
 
       function setMode(mode) {
         useGroupMode = mode === "group";
         if (useGroupMode) {
-          modeGroupBtn.classList.add("bg-slate-900", "text-white", "border-slate-900");
-          modeTemplateBtn.classList.remove("bg-slate-900", "text-white", "border-slate-900");
+          modeGroupBtn.classList.add("bg-slate-900", "text-white", "shadow-sm");
+          modeGroupBtn.classList.remove("text-slate-600");
+          modeTemplateBtn.classList.remove("bg-slate-900", "text-white", "shadow-sm");
+          modeTemplateBtn.classList.add("text-slate-600");
           templateSelect.disabled = true;
           groupSelect.disabled = false;
           if (downloadExcelBtn) downloadExcelBtn.textContent = "Descargar Excel de grupo";
           setSelectedGroup(selectedGroupId);
         } else {
-          modeTemplateBtn.classList.add("bg-slate-900", "text-white", "border-slate-900");
-          modeGroupBtn.classList.remove("bg-slate-900", "text-white", "border-slate-900");
+          modeTemplateBtn.classList.add("bg-slate-900", "text-white", "shadow-sm");
+          modeTemplateBtn.classList.remove("text-slate-600");
+          modeGroupBtn.classList.remove("bg-slate-900", "text-white", "shadow-sm");
+          modeGroupBtn.classList.add("text-slate-600");
           templateSelect.disabled = false;
           groupSelect.disabled = true;
           if (downloadExcelBtn) downloadExcelBtn.textContent = "Descargar Excel de plantilla";
           setSelectedTemplate(selectedTemplateId);
         }
+        updateTabStates();
       }
 
       function slugifyLabel(value) {
@@ -466,15 +637,30 @@
           return;
         }
         templateList.innerHTML = templates
-          .map(
-            (tpl) => `
-              <li class="flex items-center gap-2">
-                <span>${templateDisplayName(tpl)}</span>
-                <button class="text-red-500 text-xs underline delete-template" data-id="${tpl.id}">Eliminar</button>
-                <button class="text-slate-500 text-xs underline deactivate-template" data-id="${tpl.id}">Desactivar</button>
+          .map((tpl) => {
+            const isSelected = tpl.id === selectedTemplateId;
+            return `
+              <li class="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm ${
+                isSelected ? "border-primary bg-primary/5" : "border-slate-200 bg-white"
+              }">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[18px] text-primary">description</span>
+                  <span class="font-semibold">${templateDisplayName(tpl)}</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 text-xs">
+                  <button class="select-template rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white" data-id="${tpl.id}">
+                    Seleccionar
+                  </button>
+                  <button class="deactivate-template rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600" data-id="${tpl.id}">
+                    Desactivar
+                  </button>
+                  <button class="delete-template rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600" data-id="${tpl.id}">
+                    Eliminar
+                  </button>
+                </div>
               </li>
-            `
-          )
+            `;
+          })
           .join("");
         templateSelect.innerHTML = [
           '<option value="">Selecciona una plantilla...</option>',
@@ -485,6 +671,15 @@
           setSelectedTemplate(templates[0].id);
         }
         renderGroupTemplateOptions();
+        templateList.querySelectorAll(".select-template").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const id = btn.dataset.id;
+            if (!id) return;
+            setMode("template");
+            templateSelect.value = id;
+            setSelectedTemplate(id);
+          });
+        });
         templateList.querySelectorAll(".delete-template").forEach((btn) => {
           btn.addEventListener("click", async () => {
             const id = btn.dataset.id;
@@ -525,14 +720,17 @@
         groupTemplateList.innerHTML = templates
           .map(
             (tpl, index) => `
-              <div class="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
+              <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
                 <label class="flex items-center gap-2 text-sm">
                   <input class="group-template-check" data-template-id="${tpl.id}" type="checkbox" />
-                  <span>${templateDisplayName(tpl)}</span>
+                  <span class="font-medium">${templateDisplayName(tpl)}</span>
                 </label>
-                <select class="group-template-order rounded-lg border border-slate-200 px-2 py-1 text-xs" data-template-id="${tpl.id}">
-                  ${options}
-                </select>
+                <label class="flex items-center gap-2 text-xs text-slate-500">
+                  Orden
+                  <select class="group-template-order rounded-lg border border-slate-200 px-2 py-1 text-xs" data-template-id="${tpl.id}">
+                    ${options}
+                  </select>
+                </label>
               </div>
             `
           )
@@ -553,16 +751,22 @@
               .join(", ");
             const isSelected = group.id === selectedGroupId;
             return `
-              <li class="group-row flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-2 py-2 text-sm ${isSelected ? "bg-slate-50" : "hover:bg-slate-50"}" data-id="${group.id}">
-                <span>
-                  <span class="font-semibold">${group.name}</span>
-                  <span class="text-xs text-slate-500"> (${names})</span>
-                </span>
-                <div class="flex items-center gap-2">
-                  <button class="text-xs font-semibold text-primary underline select-group" data-id="${group.id}">
-                    Usar este grupo
-                  </button>
-                  <button class="text-red-500 text-xs underline delete-group" data-id="${group.id}">Eliminar</button>
+              <li class="group-row rounded-xl border px-3 py-3 text-sm ${
+                isSelected ? "border-primary bg-primary/5" : "border-slate-200 bg-white hover:bg-slate-50"
+              }" data-id="${group.id}">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p class="font-semibold text-slate-900">${group.name}</p>
+                    <p class="mt-1 text-xs text-slate-500">${names || "Sin plantillas asignadas."}</p>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button class="select-group rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white" data-id="${group.id}">
+                      Seleccionar
+                    </button>
+                    <button class="delete-group rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600" data-id="${group.id}">
+                      Eliminar
+                    </button>
+                  </div>
                 </div>
               </li>
             `;
@@ -859,10 +1063,12 @@
       selectNoneBtn.addEventListener("click", () => setAllSelections(false));
       templateSelect.addEventListener("change", (event) => {
         setSelectedTemplate(event.target.value);
+        renderTemplates();
       });
       groupSelect.addEventListener("change", (event) => {
         setMode("group");
         setSelectedGroup(event.target.value);
+        renderGroups();
       });
       modeTemplateBtn.addEventListener("click", () => setMode("template"));
       modeGroupBtn.addEventListener("click", () => setMode("group"));
@@ -915,10 +1121,10 @@
               const links = item.requests
                 .map((req) => {
                   const pdfLink = req.pdfUrl
-                    ? `<a class=\"inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-white\" href=\"${apiBase}${req.pdfUrl}\" target=\"_blank\">Ver PDF</a>`
+                    ? `<a class=\"inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm\" href=\"${apiBase}${req.pdfUrl}\" data-view-pdf=\"${req.pdfUrl}\" data-pdf-title=\"${req.templateName}\">Ver PDF</a>`
                     : "<span class=\"text-xs text-slate-400\">PDF pendiente</span>";
                   return `
-                    <div class=\"flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs\">
+                    <div class=\"flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm\">
                       <span class=\"font-semibold\">${req.templateName}</span>
                       ${pdfLink}
                     </div>
@@ -927,23 +1133,60 @@
                 .join("");
               return `
                 <div class=\"rounded-xl border border-slate-200 bg-white p-3\">
-                  <div class=\"text-sm font-semibold\">#${item.index + 1} · ${label}</div>
+                  <div class=\"text-sm font-semibold\">#${item.index + 1} - ${label}</div>
                   <div class=\"mt-2 space-y-1\">${links}</div>
                 </div>
               `;
             }
             const pdfLink = item.request?.pdfUrl
-              ? `<a class=\"inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-white\" href=\"${apiBase}${item.request.pdfUrl}\" target=\"_blank\">Ver PDF</a>`
+              ? `<a class=\"inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm\" href=\"${apiBase}${item.request.pdfUrl}\" data-view-pdf=\"${item.request.pdfUrl}\" data-pdf-title=\"${label}\">Ver PDF</a>`
               : "<span class=\"text-xs text-slate-400\">PDF pendiente</span>";
             return `
               <div class=\"rounded-xl border border-slate-200 bg-white p-3\">
-                <div class=\"text-sm font-semibold\">#${item.index + 1} · ${label}</div>
+                <div class=\"text-sm font-semibold\">#${item.index + 1} - ${label}</div>
                 <div class=\"mt-2\">${pdfLink}</div>
               </div>
             `;
           })
           .join("");
       }
+
+      function openPdfModal(pdfUrl, title) {
+        if (!pdfModal || !pdfModalFrame) return;
+        const fullUrl = `${apiBase}${pdfUrl}`;
+        pdfModalFrame.src = `${fullUrl}#toolbar=0&navpanes=0&scrollbar=1`;
+        if (pdfModalTitle) pdfModalTitle.textContent = title || "Documento";
+        pdfModal.classList.remove("hidden");
+        pdfModal.classList.add("flex");
+      }
+
+      function closePdfModal() {
+        if (!pdfModal || !pdfModalFrame) return;
+        pdfModal.classList.add("hidden");
+        pdfModal.classList.remove("flex");
+        pdfModalFrame.src = "";
+      }
+
+      if (pdfModalClose) {
+        pdfModalClose.addEventListener("click", closePdfModal);
+      }
+      if (pdfModal) {
+        pdfModal.addEventListener("click", (event) => {
+          if (event.target === pdfModal) closePdfModal();
+        });
+      }
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closePdfModal();
+      });
+      filesList.addEventListener("click", (event) => {
+        const link = event.target.closest("[data-view-pdf]");
+        if (!link) return;
+        event.preventDefault();
+        const pdfUrl = link.dataset.viewPdf;
+        const title = link.dataset.pdfTitle || "Documento";
+        if (!pdfUrl) return;
+        openPdfModal(pdfUrl, title);
+      });
 
       loadFilesBtn.addEventListener("click", async () => {
         filesMessage.textContent = "";
@@ -1117,6 +1360,7 @@
             renderRows(rows);
             renderMapping();
             validatePlaceholders();
+            updateTabStates();
           };
           reader.readAsText(file);
           return;
@@ -1142,6 +1386,7 @@
             renderRows(rows);
             renderMapping();
             validatePlaceholders();
+            updateTabStates();
           };
           reader.readAsArrayBuffer(file);
         }
@@ -1218,6 +1463,7 @@
           processBatchBtn.disabled = true;
           processBatchBtn.classList.add("opacity-60", "cursor-not-allowed");
           batchMessage.textContent = `Lote creado: ${batchId}. Se procesara internamente.`;
+          updateTabStates();
         } catch (error) {
           batchMessage.textContent = "Error de red al crear el lote.";
         } finally {
@@ -1235,6 +1481,8 @@
       loadTemplates();
       loadGroups();
       setMode("template");
+      setActiveTab("plantillas");
+      updateTabStates();
     </script>
   </body>
 </html>
