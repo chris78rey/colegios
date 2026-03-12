@@ -1,19 +1,27 @@
 ---
 name: colegios-template-groups
-description: "Runbook for multi-template groups (max 4) in colegios: DB models, API endpoints, UI flow, and batch processing."
+description: "Runbook for the internal multi-template batch engine in colegios. Use when maintaining the hidden batch-group machinery that powers one-Excel-to-many-templates processing, without re-enabling persistent group management in the UI."
 ---
 
-# Colegios Template Groups
+# Colegios Multi-template Engine
 
 ## Purpose
-Standardize how groups of up to 4 templates are created, edited, and processed as a single Excel batch in the colegio admin UI.
+Document the internal engine used to process up to 4 templates against one Excel, while keeping persistent `template groups` disabled in the user-facing product.
 
 ## Key Concepts
-- **TemplateGroup**: A named group of templates for one organization.
+- **TemplateGroup**: Internal persistence artifact reused as a temporary container for a multi-template batch.
 - **TemplateGroupItem**: Many-to-many link with ordering (1..4) per group.
-- **BatchGroup**: Batch created from an Excel for a template group.
+- **BatchGroup**: Multi-template batch created from one Excel.
 - **RequestGroup**: One row in the Excel; creates multiple `Request` (one per template).
 - **Request.requestGroupId**: Optional link to a `RequestGroup` (legacy flow stays intact).
+
+## Product Rule
+- Do **not** reintroduce CRUD for persistent template groups in `web/admin/upload.html` unless the user explicitly asks for that product feature again.
+- Current UX is:
+  - select up to 4 templates directly from the template list
+  - upload one Excel
+  - create one `BatchGroup` internally
+  - generate one PDF per selected template for each Excel row
 
 ## DB Models (Additive)
 - `TemplateGroup(organizationId, name, status, items[])`
@@ -22,54 +30,62 @@ Standardize how groups of up to 4 templates are created, edited, and processed a
 - `RequestGroup(batchGroupId, rowIndex, status)`
 - `Request.requestGroupId` (nullable)
 
-## API Endpoints
-- `GET /v1/template-groups?organizationId=...`
-- `POST /v1/template-groups`
-  - body: `organizationId`, `role=ADMIN`, `name`, `items[{templateId, order}]`
-  - rules: max 4 templates; no duplicates
-- `PATCH /v1/template-groups/:id`
-  - body: `role=ADMIN`, `items` (replace all), optional `name`
-- `DELETE /v1/template-groups/:id` (soft delete by status)
-- `POST /v1/batch-groups/start`
-  - body: `organizationId`, `groupId`, `columns`, `mapping`, `rows`
-  - validates placeholders across all templates in group
+## Current API Contract
+- `POST /v1/batches/start`
+  - accepts `templateId` for single-template flow
+  - accepts `templateIds[]` for multi-template flow
+  - when `templateIds.length > 1`, the API:
+    - validates the union of placeholders
+    - creates an internal inactive `TemplateGroup`
+    - creates a `BatchGroup`
+    - creates one `RequestGroup` per Excel row
+    - creates one `Request` per selected template per row
 - `POST /v1/batch-groups/:id/process`
 - `GET /v1/batch-groups?status=PENDING`
-- `GET /v1/batch-groups/:id/download?type=pdf|docx`
+- `GET /v1/batch-groups/:id/requests-detail`
+  - returns row-grouped files for the UI
+
+## Disabled API Surface
+- `/v1/template-groups/...` should remain `410 feature_disabled` for product-facing usage.
 
 ## UI Flow (Admin Colegio)
 - Screen: `web/admin/upload.html`
-- **Mode toggle**: `Plantilla unica` vs `Grupo de plantillas` as a pill toggle with clear active state.
-- **Crear grupo**: Select up to 4 templates + ordering
-- **Editar grupo**: Select a group (card or dropdown), adjust template checks/order, click `Actualizar grupo seleccionado`
-- **Mapping**: Union of placeholders across templates; per-placeholder "Usado en: ..." hints
-- **Batch start**: in group mode calls `/v1/batch-groups/start`, else legacy `/v1/batches/start`
+- No mode toggle.
+- No group CRUD.
+- Multi-select templates directly in the template panel.
+- Excel validation shows placeholder usage by template and missing columns.
+- Batch start always calls `/v1/batches/start`; API decides `single` vs `multi`.
+
 ## UX Guardrails
-- Show group cards with clear **Seleccionar** and **Eliminar** buttons; whole row is clickable but buttons remain primary affordances.
-- Keep group selection and Excel download in the same section to reduce context switching.
 - Upload flow is split into **tabs**:
   - Plantillas
-  - Excel y Mapeo
+  - Excel y Validacion
   - Preview y Procesar
   - Archivos
-- Tabs are **gated by state** (template/group selected → Excel uploaded → batch created).
+- Tabs are **gated by state** (template selected → Excel uploaded → batch created).
+- The user thinks in terms of **one Excel row = one record**, not in terms of persistent groups.
 
 ## Placeholder/Signatory Rules
+- Multi-template validation uses the **union of placeholders** across selected templates.
+- Excel headers must equal placeholders exactly; do not reintroduce manual mapping.
 - If placeholders contain `persona1_*`, build signatory from `persona1_*` columns.
 - If placeholders contain `persona2_*`, build signatory from `persona2_*` columns.
+- If canonical OmniSwitch representative fields exist (`Cedula`, `PrimerNombre`, etc.), prefer them.
 - If neither exists, fallback to legacy single-signatory heuristics.
 
 ## Worker Behavior
 - Polls both:
   - `/v1/batches?status=PENDING` -> `/v1/batches/:id/process`
   - `/v1/batch-groups?status=PENDING` -> `/v1/batch-groups/:id/process`
-- BatchGroup processing mirrors Batch: DOCX render -> PDF convert -> Ghostscript optimize -> zip.
+- BatchGroup processing mirrors Batch and stores outputs grouped by row.
 
 ## Constraints & Defaults
-- Max **4 templates** per group.
-- All changes are **additive**; do not break single-template flow.
+- Max **4 templates** per batch.
+- Keep single-template flow working through the same `/v1/batches/start` endpoint.
 - Templates are scoped by `organizationId` (no cross-org mixing).
+- Temporary internal groups should be created with `status: "inactive"` so they do not behave like user-managed groups.
 
 ## Validation/UX Notes
-- Group creation fails on duplicate templates or missing active templates.
-- When no group selected, mapping grid prompts for selection (prevents processing).
+- If any selected template is missing or inactive, reject the batch.
+- If any placeholder in the selected-template union is missing from Excel headers, reject the batch.
+- `requests-detail` for batch groups is the source of truth for rendering multiple PDFs under one row in the UI.

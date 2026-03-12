@@ -12,6 +12,7 @@ const port = process.env.PORT || 8080;
 const corsOrigin = process.env.CORS_ORIGIN || "*";
 const prisma = new PrismaClient();
 const storagePath = process.env.STORAGE_PATH || path.join(process.cwd(), "data", "storage");
+const examplesPath = path.join(process.cwd(), "plantillas", "ejemplos");
 
 function json(res, status, body) {
   res.writeHead(status, { "content-type": "application/json" });
@@ -193,6 +194,19 @@ async function renderHtmlToPdfBatch(htmlFiles, htmlDir, pdfDir) {
   }
 }
 
+async function renderHtmlFileToPdf(htmlPath, pdfPath) {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    const fileUrl = `file://${htmlPath.replace(/\\/g, "/")}`;
+    await page.goto(fileUrl, { waitUntil: "networkidle" });
+    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+    await page.close();
+  } finally {
+    await browser.close();
+  }
+}
+
 function optimizePdf(inputPath, outputPath) {
   return new Promise((resolve, reject) => {
     execFile(
@@ -228,6 +242,14 @@ function ensureDir(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
+async function runInChunks(items, chunkSize, handler) {
+  const safeChunkSize = Math.max(1, Number(chunkSize) || 1);
+  for (let index = 0; index < items.length; index += safeChunkSize) {
+    const chunk = items.slice(index, index + safeChunkSize);
+    await Promise.all(chunk.map(handler));
+  }
+}
+
 function safeResolvePath(baseDir, targetPath) {
   const resolved = path.resolve(baseDir, targetPath);
   if (!resolved.startsWith(baseDir)) {
@@ -246,6 +268,7 @@ function contentTypeFor(filePath) {
   if (filePath.endsWith(".pdf")) return "application/pdf";
   if (filePath.endsWith(".zip")) return "application/zip";
   if (filePath.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (filePath.endsWith(".html") || filePath.endsWith(".htm")) return "text/html; charset=utf-8";
   return "application/octet-stream";
 }
 
@@ -253,10 +276,123 @@ function sanitizePhone(value) {
   return String(value || "").replace(/[^0-9]+/g, "");
 }
 
-function buildExcelBuffer(headers) {
+const OMNISWITCH_FIELDS = [
+  "Cedula",
+  "PrimerNombre",
+  "SegunNombre",
+  "PrimerApellido",
+  "SegApellido",
+  "Celular",
+  "Email",
+  "FirmaPrincipal",
+  "IdPais",
+  "IdProvincia",
+  "IdCiudad",
+  "Direccion",
+];
+
+const OMNISWITCH_REQUIRED_FIELDS = [
+  "Cedula",
+  "PrimerNombre",
+  "PrimerApellido",
+  "Celular",
+  "Email",
+  "Direccion",
+];
+
+const DEFAULT_EXAMPLE_FIELDS = [
+  ...OMNISWITCH_FIELDS,
+  "AlumnoNombre",
+  "AlumnoApellido",
+  "Curso",
+  "Fecha",
+  "Institucion",
+];
+
+function orderedExcelHeaders(placeholders) {
+  const extraFields = placeholders.filter((field) => !OMNISWITCH_FIELDS.includes(field));
+  return [...OMNISWITCH_FIELDS, ...extraFields];
+}
+
+function uniquePlaceholders(templates) {
+  return Array.from(
+    new Set(
+      templates.flatMap((template) => (Array.isArray(template?.placeholders) ? template.placeholders : []))
+    )
+  );
+}
+
+function parseTemplateIdsParam(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function sampleValueForExcelField(field) {
+  return "";
+}
+
+function buildExampleExcelRows(headers) {
+  const firstNames = ["Laura", "Carlos", "Maria", "Jorge", "Ana", "Luis", "Sofia", "Diego", "Paula", "Mateo"];
+  const middleNames = ["Maria", "Andres", "Jose", "Fernanda", "Alejandra", "Xavier", "Isabel", "David", "Lucia", "Gabriel"];
+  const lastNames = ["Gomez", "Perez", "Torres", "Ruiz", "Moreno", "Castro", "Silva", "Rojas", "Vega", "Lopez"];
+  const secondLastNames = ["Perez", "Lopez", "Mendoza", "Garcia", "Sanchez", "Mora", "Diaz", "Ortega", "Nunez", "Herrera"];
+  const studentNames = ["Mateo", "Valentina", "Samuel", "Julieta", "Emilia", "Nicolas", "Martina", "Daniel", "Lucia", "Gabriel"];
+  const studentLastNames = ["Perez", "Gomez", "Ruiz", "Castro", "Vega", "Silva", "Torres", "Lopez", "Rojas", "Moreno"];
+  const courses = ["1A", "2A", "3A", "4A", "5A", "6A", "7A", "8A", "9A", "10A"];
+
+  return Array.from({ length: 10 }, (_, index) =>
+    headers.map((header) => {
+      const firstName = firstNames[index];
+      const middleName = middleNames[index];
+      const lastName = lastNames[index];
+      const secondLastName = secondLastNames[index];
+      const studentName = studentNames[index];
+      const studentLastName = studentLastNames[index];
+      const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${index + 1}@correo.com`;
+
+      const samples = {
+        Cedula: `09${String(12345678 + index).padStart(8, "0")}`,
+        PrimerNombre: firstName,
+        SegunNombre: middleName,
+        PrimerApellido: lastName,
+        SegApellido: secondLastName,
+        Celular: `09${String(91234567 + index).padStart(8, "0")}`,
+        Email: email,
+        FirmaPrincipal: 1,
+        IdPais: 19,
+        IdProvincia: 17,
+        IdCiudad: 1701,
+        Direccion: `Quito - Sector ${index + 1}`,
+        AlumnoNombre: studentName,
+        AlumnoApellido: studentLastName,
+        Curso: courses[index],
+        Fecha: `2026-03-${String(index + 1).padStart(2, "0")}`,
+        Institucion: "Colegio Central",
+      };
+      return Object.prototype.hasOwnProperty.call(samples, header) ? samples[header] : sampleValueForExcelField(header);
+    })
+  );
+}
+
+function buildExcelBuffer(placeholders) {
+  const headers = orderedExcelHeaders(placeholders);
+  const exampleRows = buildExampleExcelRows(headers);
   const workbook = XLSX.utils.book_new();
-  const sheet = XLSX.utils.aoa_to_sheet([headers]);
+  const sheet = XLSX.utils.aoa_to_sheet([headers, ...exampleRows]);
+  sheet["!cols"] = headers.map((header) => ({ wch: Math.max(String(header).length + 4, 16) }));
   XLSX.utils.book_append_sheet(workbook, sheet, "plantilla");
+  const guide = XLSX.utils.aoa_to_sheet([
+    ["Guia de uso"],
+    ["Campos OmniSwitch", OMNISWITCH_FIELDS.join(", ")],
+    ["Campos obligatorios a llenar", OMNISWITCH_REQUIRED_FIELDS.join(", ")],
+    ["Campos con default sugerido", "FirmaPrincipal, IdPais, IdProvincia, IdCiudad"],
+    ["Campos auxiliares", headers.filter((field) => !OMNISWITCH_FIELDS.includes(field)).join(", ") || "Ninguno"],
+    ["Regla clave", "El placeholder de la plantilla debe coincidir exactamente con el nombre de la columna del Excel."],
+  ]);
+  guide["!cols"] = [{ wch: 24 }, { wch: 110 }];
+  XLSX.utils.book_append_sheet(workbook, guide, "guia");
   return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
 }
 
@@ -270,44 +406,184 @@ function pickRowValue(row, keys) {
   return "";
 }
 
-function buildPrefixedSignatory(row, prefix) {
-  const idNumber = pickRowValue(row, [`${prefix}cedula`, `${prefix}id`, `${prefix}documento`]);
-  const firstName = pickRowValue(row, [`${prefix}nombre`]);
-  const lastName = pickRowValue(row, [`${prefix}apellido`]);
+function buildSignatoryFromKeys(
+  row,
+  {
+    idKeys = [],
+    firstNameKeys = [],
+    middleNameKeys = [],
+    lastNameKeys = [],
+    secondLastNameKeys = [],
+    fullNameKeys = [],
+    emailKeys = [],
+    phoneKeys = [],
+    role,
+    isPrimary,
+  }
+) {
+  const idNumber = pickRowValue(row, idKeys);
+  const firstName = pickRowValue(row, firstNameKeys);
+  const middleName = pickRowValue(row, middleNameKeys);
+  const lastName = pickRowValue(row, lastNameKeys);
+  const secondLastName = pickRowValue(row, secondLastNameKeys);
   const fullName =
-    [firstName, lastName].filter(Boolean).join(" ").trim() || pickRowValue(row, [`${prefix}nombre_completo`]);
-  const email = pickRowValue(row, [`${prefix}email`, `${prefix}correo`]);
-  const phone = pickRowValue(row, [`${prefix}celular`, `${prefix}telefono`]);
+    [firstName, middleName, lastName, secondLastName].filter(Boolean).join(" ").trim() ||
+    pickRowValue(row, fullNameKeys);
+  const email = pickRowValue(row, emailKeys);
+  const phone = pickRowValue(row, phoneKeys);
   const sanitizedPhone = sanitizePhone(phone);
   if (!idNumber && !fullName && !email && !phone) return null;
-  return { idNumber, fullName, phone, email, sanitizedPhone };
+  return { idNumber, fullName, phone, email, sanitizedPhone, role, isPrimary };
+}
+
+function buildPrefixedSignatory(row, prefix, role, isPrimary) {
+  return buildSignatoryFromKeys(row, {
+    idKeys: [`${prefix}cedula`, `${prefix}id`, `${prefix}documento`],
+    firstNameKeys: [`${prefix}nombre`, `${prefix}nombres`],
+    lastNameKeys: [`${prefix}apellido`, `${prefix}apellidos`],
+    fullNameKeys: [`${prefix}nombre_completo`],
+    emailKeys: [`${prefix}email`, `${prefix}correo`],
+    phoneKeys: [`${prefix}celular`, `${prefix}telefono`],
+    role,
+    isPrimary,
+  });
+}
+
+function buildRepresentativeSignatory(row) {
+  return buildSignatoryFromKeys(row, {
+    idKeys: [
+      "Cedula",
+      "cedula_representante",
+      "representante_cedula",
+      "representante_documento",
+      "padre_cedula",
+      "madre_cedula",
+      "acudiente_cedula",
+      "responsable_cedula",
+      "cedula",
+    ],
+    firstNameKeys: [
+      "PrimerNombre",
+      "representante_nombre",
+      "primer_nombre_representante",
+      "padre_nombre",
+      "madre_nombre",
+      "acudiente_nombre",
+      "responsable_nombre",
+    ],
+    middleNameKeys: ["SegunNombre"],
+    lastNameKeys: [
+      "PrimerApellido",
+      "representante_apellido",
+      "primer_apellido_representante",
+      "padre_apellido",
+      "madre_apellido",
+      "acudiente_apellido",
+      "responsable_apellido",
+    ],
+    secondLastNameKeys: ["SegApellido"],
+    fullNameKeys: [
+      "NombreFirmante",
+      "representante",
+      "nombre_representante",
+      "representante_nombre_completo",
+      "primer_nombre_representante",
+      "padre",
+      "nombre_padre",
+      "madre",
+      "nombre_madre",
+      "acudiente",
+      "responsable",
+      "full_name",
+      "fullName",
+    ],
+    emailKeys: [
+      "Email",
+      "representante_email",
+      "email_representante",
+      "correo_representante",
+      "padre_email",
+      "correo_padre",
+      "madre_email",
+      "correo_madre",
+      "acudiente_email",
+      "responsable_email",
+      "email",
+      "correo",
+      "parent_email",
+    ],
+    phoneKeys: [
+      "Celular",
+      "representante_celular",
+      "celular_representante",
+      "telefono_representante",
+      "padre_celular",
+      "celular_padre",
+      "madre_celular",
+      "celular_madre",
+      "acudiente_celular",
+      "responsable_celular",
+      "phone",
+      "celular",
+      "parent_phone",
+    ],
+    role: "REPRESENTANTE_PRINCIPAL",
+    isPrimary: true,
+  });
 }
 
 function buildSignatoriesForTemplate(placeholders, row) {
   const list = [];
   const hasPersona1 = placeholders.some((p) => p.startsWith("persona1_"));
   const hasPersona2 = placeholders.some((p) => p.startsWith("persona2_"));
+  const hasRepresentativeFields = placeholders.some((p) =>
+    [
+      "Cedula",
+      "PrimerNombre",
+      "SegunNombre",
+      "PrimerApellido",
+      "SegApellido",
+      "Celular",
+      "Email",
+      "FirmaPrincipal",
+      "IdPais",
+      "IdProvincia",
+      "IdCiudad",
+      "Direccion",
+      "representante",
+      "representante_nombre",
+      "representante_apellido",
+      "cedula_representante",
+      "representante_email",
+      "representante_celular",
+      "primer_nombre_representante",
+      "primer_apellido_representante",
+      "email_representante",
+      "telefono_representante",
+    ].includes(p)
+  );
 
   if (hasPersona1 || hasPersona2) {
     if (hasPersona1) {
-      const signer1 = buildPrefixedSignatory(row, "persona1_");
+      const signer1 = buildPrefixedSignatory(row, "persona1_", "REPRESENTANTE_PRINCIPAL", true);
       if (signer1) list.push(signer1);
     }
     if (hasPersona2) {
-      const signer2 = buildPrefixedSignatory(row, "persona2_");
+      const signer2 = buildPrefixedSignatory(row, "persona2_", "REPRESENTANTE_SECUNDARIO", false);
       if (signer2) list.push(signer2);
     }
   }
 
   if (list.length) return list;
 
-  const idNumber = pickRowValue(row, ["id_number", "idNumber", "cedula_representante", "cedula", "cedula_estudiante"]);
-  const fullName = pickRowValue(row, ["full_name", "fullName", "representante", "nombre_estudiante"]);
-  const email = pickRowValue(row, ["email", "correo", "parent_email"]);
-  const phone = pickRowValue(row, ["phone", "celular", "parent_phone"]);
-  const sanitizedPhone = sanitizePhone(phone);
-  if (!idNumber && !fullName && !email && !phone) return [];
-  return [{ idNumber, fullName, phone, email, sanitizedPhone }];
+  if (hasRepresentativeFields) {
+    const representativeSigner = buildRepresentativeSignatory(row);
+    if (representativeSigner) return [representativeSigner];
+  }
+
+  const representativeSigner = buildRepresentativeSignatory(row);
+  if (representativeSigner) return [representativeSigner];
+  return [];
 }
 
 async function processBatch(batchId) {
@@ -347,9 +623,12 @@ async function processBatch(batchId) {
   ensureDir(pdfDir);
 
   const total = Math.min(rows.length, requests.length);
-  for (let i = 0; i < total; i += 1) {
-    const row = rows[i];
-    const request = requests[i];
+  const prepConcurrency = Math.max(1, Number(process.env.BATCH_PREP_CONCURRENCY) || 1);
+  const batchPairs = Array.from({ length: total }, (_, i) => ({
+    row: rows[i],
+    request: requests[i],
+  }));
+  await runInChunks(batchPairs, prepConcurrency, async ({ row, request }) => {
     const ext = path.extname(template.pdfPath || "").toLowerCase();
     if (ext === ".html" || ext === ".htm") {
       const htmlPath = path.join(htmlDir, `${request.id}.html`);
@@ -368,7 +647,7 @@ async function processBatch(batchId) {
         console.error(`DOCX to HTML failed for ${docxPath}:`, error);
       }
     }
-  }
+  });
 
   const htmlFiles = fs.readdirSync(htmlDir).filter((file) => file.endsWith(".html"));
   try {
@@ -407,7 +686,7 @@ async function processBatch(batchId) {
   const optimizedDir = path.join(batchDir, "pdf_optimized");
   if (pdfFiles.length) {
     ensureDir(optimizedDir);
-    for (const file of pdfFiles) {
+    await runInChunks(pdfFiles, prepConcurrency, async (file) => {
       const inputPath = path.join(pdfDir, file);
       const outputPath = path.join(optimizedDir, file);
       try {
@@ -416,7 +695,7 @@ async function processBatch(batchId) {
         console.error(`Ghostscript failed for ${file}:`, error);
         fs.copyFileSync(inputPath, outputPath);
       }
-    }
+    });
     pdfZip.addLocalFolder(optimizedDir);
     pdfZip.writeZip(pdfZipPath);
   }
@@ -487,12 +766,14 @@ async function processBatchGroup(batchGroupId) {
   ensureDir(pdfDir);
 
   const templateMap = new Map(items.map((item) => [item.templateId, item.template]));
-
-  for (const groupRow of requestGroups) {
+  const prepConcurrency = Math.max(1, Number(process.env.BATCH_PREP_CONCURRENCY) || 1);
+  const groupTasks = requestGroups.flatMap((groupRow) => {
     const row = rows[groupRow.rowIndex] || {};
-    for (const request of groupRow.requests) {
+    return groupRow.requests.map((request) => ({ row, request }));
+  });
+  await runInChunks(groupTasks, prepConcurrency, async ({ row, request }) => {
       const template = templateMap.get(request.templateId);
-      if (!template) continue;
+      if (!template) return;
       const ext = path.extname(template.pdfPath || "").toLowerCase();
       if (ext === ".html" || ext === ".htm") {
         const htmlPath = path.join(htmlDir, `${request.id}.html`);
@@ -511,8 +792,7 @@ async function processBatchGroup(batchGroupId) {
           console.error(`DOCX to HTML failed for ${docxPath}:`, error);
         }
       }
-    }
-  }
+  });
 
   const htmlFiles = fs.readdirSync(htmlDir).filter((file) => file.endsWith(".html"));
   try {
@@ -551,7 +831,7 @@ async function processBatchGroup(batchGroupId) {
   const optimizedDir = path.join(batchDir, "pdf_optimized");
   if (pdfFiles.length) {
     ensureDir(optimizedDir);
-    for (const file of pdfFiles) {
+    await runInChunks(pdfFiles, prepConcurrency, async (file) => {
       const inputPath = path.join(pdfDir, file);
       const outputPath = path.join(optimizedDir, file);
       try {
@@ -560,7 +840,7 @@ async function processBatchGroup(batchGroupId) {
         console.error(`Ghostscript failed for ${file}:`, error);
         fs.copyFileSync(inputPath, outputPath);
       }
-    }
+    });
     pdfZip.addLocalFolder(optimizedDir);
     pdfZip.writeZip(pdfZipPath);
   }
@@ -604,6 +884,60 @@ const server = http.createServer((req, res) => {
 
   if (url === "/health") {
     return json(res, 200, { status: "ok" });
+  }
+
+  if (pathOnly === "/v1/examples/template-base-html" && method === "GET") {
+    return (() => {
+      try {
+        const filePath = path.join(examplesPath, "base_html_impresion.html");
+        if (!fs.existsSync(filePath)) return json(res, 404, { error: "example_not_found" });
+        res.writeHead(200, {
+          "content-type": "text/html; charset=utf-8",
+          "content-disposition": 'attachment; filename="base_html_impresion.html"',
+        });
+        fs.createReadStream(filePath).pipe(res);
+      } catch (error) {
+        return json(res, 500, { error: "example_download_failed" });
+      }
+    })();
+  }
+
+  if (pathOnly === "/v1/examples/template-matricula-html" && method === "GET") {
+    return (() => {
+      try {
+        const filePath = path.join(examplesPath, "solicitud_matricula.html");
+        if (!fs.existsSync(filePath)) return json(res, 404, { error: "example_not_found" });
+        res.writeHead(200, {
+          "content-type": "text/html; charset=utf-8",
+          "content-disposition": 'attachment; filename="solicitud_matricula.html"',
+        });
+        fs.createReadStream(filePath).pipe(res);
+      } catch (error) {
+        return json(res, 500, { error: "example_download_failed" });
+      }
+    })();
+  }
+
+  if (pathOnly === "/v1/examples/excel-base" && method === "GET") {
+    return (() => {
+      try {
+        const buffer = buildExcelBuffer(DEFAULT_EXAMPLE_FIELDS);
+        res.writeHead(200, {
+          "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "content-disposition": 'attachment; filename="excel_ejemplo_10_registros.xlsx"',
+        });
+        res.end(buffer);
+      } catch (error) {
+        return json(res, 500, { error: "example_excel_failed" });
+      }
+    })();
+  }
+
+  if (pathOnly.startsWith("/v1/template-groups") && method !== "OPTIONS") {
+    return json(res, 410, {
+      error: "feature_disabled",
+      message: "template_groups_disabled_use_single_template",
+    });
   }
 
   if (url.startsWith("/v1/files") && method === "GET") {
@@ -912,6 +1246,23 @@ const server = http.createServer((req, res) => {
     })();
   }
 
+  if (pathOnly.startsWith("/v1/batches/") && method === "GET" && !pathOnly.endsWith("/download") && !pathOnly.endsWith("/files") && !pathOnly.endsWith("/requests") && !pathOnly.endsWith("/request") && !pathOnly.endsWith("/process") && !pathOnly.endsWith("/requests-detail")) {
+    return (async () => {
+      try {
+        const batchId = pathOnly.split("/")[3];
+        if (!batchId) return json(res, 400, { error: "missing_batch_id" });
+        const batch = await prisma.batch.findUnique({
+          where: { id: batchId },
+          select: { id: true, status: true, totalCount: true, validCount: true, invalidCount: true, updatedAt: true },
+        });
+        if (!batch) return json(res, 404, { error: "batch_not_found" });
+        return json(res, 200, { batch });
+      } catch (error) {
+        return json(res, 500, { error: "batch_detail_failed" });
+      }
+    })();
+  }
+
   if (pathOnly.startsWith("/v1/batches/") && pathOnly.endsWith("/requests-detail") && method === "GET") {
     return (async () => {
       try {
@@ -970,15 +1321,107 @@ const server = http.createServer((req, res) => {
       try {
         const body = await readJson(req);
         const organizationId = String(body.organizationId || "");
-        const templateId = String(body.templateId || "");
+        const requestedTemplateIds = Array.isArray(body.templateIds)
+          ? body.templateIds.map((id) => String(id || "").trim()).filter(Boolean)
+          : [];
+        const templateId = String(body.templateId || requestedTemplateIds[0] || "");
         const rows = Array.isArray(body.rows) ? body.rows : [];
         if (!organizationId || !templateId || !rows.length) {
           return json(res, 400, { error: "missing_batch_payload" });
         }
+        const columns = Array.isArray(body.columns) ? body.columns.map((c) => String(c).trim()) : Object.keys(rows[0] || {});
+
+        if (requestedTemplateIds.length > 1) {
+          if (requestedTemplateIds.length > 4) {
+            return json(res, 400, { error: "too_many_templates" });
+          }
+          const templates = await prisma.template.findMany({
+            where: {
+              id: { in: requestedTemplateIds },
+              organizationId,
+              status: "active",
+            },
+            orderBy: { createdAt: "asc" },
+          });
+          if (templates.length !== requestedTemplateIds.length) {
+            return json(res, 404, { error: "template_not_found" });
+          }
+          const templateOrder = new Map(requestedTemplateIds.map((id, index) => [id, index]));
+          templates.sort((a, b) => templateOrder.get(a.id) - templateOrder.get(b.id));
+          const placeholders = uniquePlaceholders(templates);
+          const missing = placeholders.filter((ph) => !columns.includes(ph));
+          if (missing.length) {
+            return json(res, 400, { error: "missing_placeholders", missing });
+          }
+
+          const tempGroup = await prisma.templateGroup.create({
+            data: {
+              organizationId,
+              name: `__batch__${Date.now()}`,
+              status: "inactive",
+              items: {
+                create: templates.map((template, index) => ({
+                  templateId: template.id,
+                  order: index,
+                })),
+              },
+            },
+            include: { items: true },
+          });
+
+          const batchGroup = await prisma.batchGroup.create({
+            data: {
+              organizationId,
+              groupId: tempGroup.id,
+              status: "PENDING",
+              totalCount: rows.length,
+              validCount: rows.length,
+              invalidCount: 0,
+              mapping: body.mapping || null,
+            },
+          });
+
+          const batchDir = path.join(storagePath, "batch-groups", organizationId, batchGroup.id);
+          ensureDir(batchDir);
+          fs.writeFileSync(path.join(batchDir, "input.json"), JSON.stringify({ columns, rows }, null, 2));
+
+          for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+            const row = rows[rowIndex];
+            const requestGroup = await prisma.requestGroup.create({
+              data: {
+                batchGroupId: batchGroup.id,
+                rowIndex,
+                status: "PENDING",
+              },
+            });
+
+            for (const template of templates) {
+              const placeholdersForTemplate = Array.isArray(template.placeholders) ? template.placeholders : [];
+              const signatories = buildSignatoriesForTemplate(placeholdersForTemplate, row);
+              const requestData = {
+                organizationId,
+                templateId: template.id,
+                requestGroupId: requestGroup.id,
+                status: "PENDING",
+              };
+              if (signatories.length) {
+                requestData.signatories = { create: signatories };
+              }
+              await prisma.request.create({ data: requestData });
+            }
+          }
+
+          return json(res, 201, {
+            batchId: batchGroup.id,
+            total: rows.length,
+            mode: "multi",
+            templateCount: templates.length,
+          });
+        }
+
         const template = await prisma.template.findFirst({ where: { id: templateId, status: "active" } });
         if (!template) return json(res, 404, { error: "template_not_found" });
         const placeholders = Array.isArray(template.placeholders) ? template.placeholders : [];
-        const columns = Array.isArray(body.columns) ? body.columns.map((c) => String(c).trim()) : Object.keys(rows[0] || {});
         const missing = placeholders.filter((ph) => !columns.includes(ph));
         if (missing.length) {
           return json(res, 400, { error: "missing_placeholders", missing });
@@ -1016,7 +1459,7 @@ const server = http.createServer((req, res) => {
           await prisma.request.create({ data });
         }
 
-        return json(res, 201, { batchId: batch.id, total: rows.length });
+        return json(res, 201, { batchId: batch.id, total: rows.length, mode: "single", templateCount: 1 });
       } catch (error) {
         console.error(error);
         return json(res, 500, { error: "batch_start_failed" });
@@ -1169,7 +1612,13 @@ const server = http.createServer((req, res) => {
           },
         });
 
-        return json(res, 201, { template });
+        return json(res, 201, {
+          template: {
+            ...template,
+            templateUrl: toFileUrl(template.pdfPath),
+            templateExt: path.extname(template.pdfPath || "").toLowerCase(),
+          },
+        });
       } catch (error) {
         console.error(error);
         return json(res, 500, { error: "template_upload_failed" });
@@ -1186,7 +1635,9 @@ const server = http.createServer((req, res) => {
         if (!template) return json(res, 404, { error: "template_not_found" });
         const inUse = await prisma.request.findFirst({ where: { templateId: id } });
         const inBatch = await prisma.batch.findFirst({ where: { templateId: id } });
-        const inGroup = await prisma.templateGroupItem.findFirst({ where: { templateId: id } });
+        const inGroup = await prisma.templateGroupItem.findFirst({
+          where: { templateId: id, group: { status: "active" } },
+        });
         if (inUse || inBatch || inGroup) {
           return json(res, 409, { error: "template_in_use" });
         }
@@ -1221,6 +1672,38 @@ const server = http.createServer((req, res) => {
     })();
   }
 
+  if (pathOnly === "/v1/templates/excel" && method === "GET") {
+    return (async () => {
+      try {
+        const query = new URL(url, `http://${req.headers.host || "localhost"}`).searchParams;
+        const organizationId = query.get("organizationId");
+        const role = query.get("role");
+        const templateIds = parseTemplateIdsParam(query.get("templateIds"));
+        if (!templateIds.length) return json(res, 400, { error: "missing_template_ids" });
+        if (!organizationId && role !== "SUPER_ADMIN") {
+          return json(res, 400, { error: "organization_required" });
+        }
+        const where = {
+          id: { in: templateIds },
+          status: "active",
+          ...(organizationId ? { organizationId } : {}),
+        };
+        const templates = await prisma.template.findMany({ where, orderBy: { createdAt: "asc" } });
+        if (templates.length !== templateIds.length) return json(res, 404, { error: "template_not_found" });
+        const placeholders = uniquePlaceholders(templates);
+        if (!placeholders.length) return json(res, 400, { error: "no_placeholders" });
+        const buffer = buildExcelBuffer(placeholders);
+        res.writeHead(200, {
+          "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "content-disposition": 'attachment; filename="plantillas_seleccionadas.xlsx"',
+        });
+        res.end(buffer);
+      } catch (error) {
+        return json(res, 500, { error: "templates_excel_failed" });
+      }
+    })();
+  }
+
   if (pathOnly.startsWith("/v1/templates/") && pathOnly.endsWith("/excel") && method === "GET") {
     return (async () => {
       try {
@@ -1237,6 +1720,8 @@ const server = http.createServer((req, res) => {
         if (!template) return json(res, 404, { error: "template_not_found" });
         const placeholders = Array.isArray(template.placeholders) ? template.placeholders : [];
         if (!placeholders.length) return json(res, 400, { error: "no_placeholders" });
+        const excelFields = orderedExcelHeaders(placeholders);
+        if (!excelFields.length) return json(res, 400, { error: "no_excel_fields" });
         const buffer = buildExcelBuffer(placeholders);
         const safeName = slugify(template.name || "plantilla") || "plantilla";
         res.writeHead(200, {
@@ -1246,6 +1731,37 @@ const server = http.createServer((req, res) => {
         res.end(buffer);
       } catch (error) {
         return json(res, 500, { error: "template_excel_failed" });
+      }
+    })();
+  }
+
+  if (pathOnly.startsWith("/v1/templates/") && pathOnly.endsWith("/preview.pdf") && method === "GET") {
+    return (async () => {
+      try {
+        const id = pathOnly.split("/")[3];
+        if (!id) return json(res, 400, { error: "missing_template_id" });
+        const query = new URL(url, `http://${req.headers.host || "localhost"}`).searchParams;
+        const organizationId = query.get("organizationId");
+        const role = query.get("role");
+        if (!organizationId && role !== "SUPER_ADMIN") {
+          return json(res, 400, { error: "organization_required" });
+        }
+        const where = organizationId ? { id, organizationId, status: "active" } : { id, status: "active" };
+        const template = await prisma.template.findFirst({ where });
+        if (!template) return json(res, 404, { error: "template_not_found" });
+        const ext = path.extname(template.pdfPath || "").toLowerCase();
+        if (ext !== ".html" && ext !== ".htm") {
+          return json(res, 400, { error: "template_preview_only_for_html" });
+        }
+        const previewDir = path.join(storagePath, "preview", template.organizationId, template.id);
+        ensureDir(previewDir);
+        const pdfPath = path.join(previewDir, "preview.pdf");
+        await renderHtmlFileToPdf(template.pdfPath, pdfPath);
+        res.writeHead(200, { "content-type": "application/pdf" });
+        fs.createReadStream(pdfPath).pipe(res);
+      } catch (error) {
+        console.error("template_preview_failed", error);
+        return json(res, 500, { error: "template_preview_failed" });
       }
     })();
   }
@@ -1264,7 +1780,12 @@ const server = http.createServer((req, res) => {
           where,
           orderBy: { createdAt: "desc" },
         });
-        return json(res, 200, { items: templates });
+        const items = templates.map((template) => ({
+          ...template,
+          templateUrl: toFileUrl(template.pdfPath),
+          templateExt: path.extname(template.pdfPath || "").toLowerCase(),
+        }));
+        return json(res, 200, { items });
       } catch (error) {
         return json(res, 500, { error: "templates_failed" });
       }
@@ -1367,6 +1888,23 @@ const server = http.createServer((req, res) => {
         return json(res, 200, { items });
       } catch (error) {
         return json(res, 500, { error: "batch_groups_failed" });
+      }
+    })();
+  }
+
+  if (pathOnly.startsWith("/v1/batch-groups/") && method === "GET" && !pathOnly.endsWith("/download") && !pathOnly.endsWith("/requests-detail") && !pathOnly.endsWith("/process")) {
+    return (async () => {
+      try {
+        const batchId = pathOnly.split("/")[3];
+        if (!batchId) return json(res, 400, { error: "missing_batch_id" });
+        const batch = await prisma.batchGroup.findUnique({
+          where: { id: batchId },
+          select: { id: true, status: true, totalCount: true, validCount: true, invalidCount: true, updatedAt: true },
+        });
+        if (!batch) return json(res, 404, { error: "batch_not_found" });
+        return json(res, 200, { batch });
+      } catch (error) {
+        return json(res, 500, { error: "batch_group_detail_failed" });
       }
     })();
   }

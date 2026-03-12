@@ -29,6 +29,8 @@ Todos los endpoints requieren `UserName` y `Password` en el payload.
 ## 3. Manejo de IDSolicitud
 - El ID de la solicitud se obtiene desde `SolicitudeCreate`.
 - En pasos siguientes se debe enviar `IDSolicitud`.
+- Una misma `IDSolicitud` puede agrupar multiples PDFs cuando se usa el flujo estandar.
+- `SolicitudeExpress` no aplica si se necesitan multiples documentos o multiples firmantes.
 - En el flujo actual se persiste en `solicitud_id.txt` para no perder estado.
 - En el nuevo proyecto, persistirlo en base de datos (`requests.omni_id`) y en eventos.
 
@@ -63,6 +65,7 @@ Objetivo: cargar el PDF en base64 con coordenadas de firma.
 Pre-proceso:
 - Optimizar PDF si es grande (Ghostscript en el flujo actual).
 - Convertir a Base64.
+- Si el request tiene multiples PDFs, ejecutar este paso en loop y reutilizar la misma `IDSolicitud`.
 
 Payload:
 ```json
@@ -80,6 +83,7 @@ Payload:
 Notas:
 - `numeroPagina` y `Coordenadas` salen de la plantilla configurada por institucion.
 - El origen de coordenadas es la esquina inferior izquierda del PDF.
+- `numeroPagina` y `Coordenadas` pueden variar por documento dentro de la misma solicitud.
 - Validar respuesta y registrar evento.
 
 ### 4.3 Registrar firmantes (SolicitudeCreateSignatory)
@@ -110,6 +114,7 @@ Notas:
 - Sanitizar celular: si tiene 9 digitos, anteponer `0`.
 - Validar que email y cedula existan antes de enviar.
 - Manejar multiples firmantes con una cola o loop controlado.
+- Los firmantes se asocian a la `IDSolicitud` completa y aplican automaticamente a todos los documentos cargados.
 
 ### 4.4 Disparar envio (SolicitudeSend)
 Objetivo: enviar la solicitud al/los firmantes (WhatsApp/email segun OmniSwitch).
@@ -149,6 +154,7 @@ Campos usados:
 
 Notas:
 - La API puede devolver lista o diccionario. El parser debe soportar ambos.
+- `Solicitudes_Documentos` llega como arreglo con el estado individual por archivo.
 
 ### 4.6 Descargar documento firmado (SolicitudeGetDocument)
 Objetivo: obtener el PDF firmado en base64.
@@ -169,6 +175,18 @@ Respuesta esperada:
 Accion:
 - Decodificar y guardar en storage (ej. `storage/org_<id>/firmados/`).
 
+Notas:
+- Este endpoint devuelve un unico documento por llamada.
+- Es obligatorio enviar `NombreDocumento` exacto para descargar cada PDF firmado.
+- Antes de descargar, verificar con `GetSolicitudByID` que `DocFirmado == 1`.
+- `DocumentoBase64` no debe persistirse en la base de datos.
+- Convertir `DocumentoBase64` a binario (`Buffer`) y guardar el archivo fisico en disco.
+- Estructura sugerida de almacenamiento: `storage/{organizationId}/{requestId}/`.
+- Usar un nombre estable para el firmado final, por ejemplo `signed.pdf` o `final.pdf`.
+- Persistir en `Request` solo la ruta relativa (`finalDocumentPath`).
+- Validar rutas y segmentos para impedir path traversal (`../`).
+- Si el frontend necesita el PDF, exponer un endpoint propio que lea desde disco y responda por stream en lugar de devolver Base64.
+
 ## 5. Estados y trazabilidad
 Estados recomendados:
 - `PENDING` (creada localmente)
@@ -188,12 +206,46 @@ Registrar cada transicion en `request_events` con `resultCode/resultText`.
 - Si hay demasiados errores consecutivos, pausar cola de esa institucion.
 
 ## 7. Carga masiva (Excel)
-Campos minimos por fila:
-- Cedula
-- Nombres y apellidos
-- Celular
-- Email
-- Tipo de documento / plantilla
+Regla de nomenclatura:
+- Los placeholders de la plantilla HTML/DOCX deben coincidir exactamente con los nombres de columna del Excel.
+- Si la plantilla usa `{{SegApellido}}`, el Excel debe tener una columna `SegApellido`.
+- No introducir aliases intermedios para los campos canónicos de OmniSwitch.
+
+Campos canónicos de firma por fila:
+- `Cedula`
+- `PrimerNombre`
+- `SegunNombre`
+- `PrimerApellido`
+- `SegApellido`
+- `Celular`
+- `Email`
+- `FirmaPrincipal`
+- `IdPais`
+- `IdProvincia`
+- `IdCiudad`
+- `Direccion`
+
+Campos mínimos que deben llenarse de ley en el Excel:
+- `Cedula`
+- `PrimerNombre`
+- `PrimerApellido`
+- `Celular`
+- `Email`
+- `Direccion`
+
+Campos que pueden ir con default prellenado por institución o en el Excel ejemplo:
+- `FirmaPrincipal`
+- `IdPais`
+- `IdProvincia`
+- `IdCiudad`
+
+Campos adicionales permitidos para el documento:
+- `AlumnoNombre`
+- `AlumnoApellido`
+- `Curso`
+- `Fecha`
+- `Institucion`
+- cualquier otro placeholder adicional requerido por la plantilla
 
 Reglas:
 - Sanitizar celular (agregar `0` si falta).
@@ -209,6 +261,8 @@ Reglas:
 - El PDF debe ser liviano; si supera limites, optimizar con Ghostscript.
 - Mantener logs por `IDSolicitud` y `request_id`.
 - La API de OmniSwitch puede responder con estructuras variables; no asumir un unico formato.
+- La documentacion no fija un maximo numerico de documentos por solicitud, pero el timeout de ~30s limita el tamano practico del paquete.
+- La cadena Base64 del firmado final es costosa en memoria; debe existir solo durante la descarga y conversion a archivo.
 
 ## 10. Checklist de implementacion
 1. Validar env vars y credenciales.
@@ -217,4 +271,6 @@ Reglas:
 4. Registrar firmantes (con celular saneado).
 5. Enviar solicitud.
 6. Consultar estado hasta `DocFirmado == 1`.
-7. Descargar PDF y guardar.
+7. Descargar PDF firmado por `NombreDocumento`.
+8. Convertir Base64 a binario y guardar en `storage/{organizationId}/{requestId}/`.
+9. Persistir `finalDocumentPath` y servir el archivo por stream cuando se solicite.

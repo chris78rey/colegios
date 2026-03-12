@@ -6,18 +6,23 @@ import os
 out_path = r"G:\\codex_projects\\colegios\\plantillas\\ejemplos\\ejemplo_10_registros.xlsx"
 
 headers = [
-    "institucion",
-    "fecha",
-    "persona1_nombre",
-    "persona1_apellido",
-    "persona1_cedula",
-    "persona1_email",
-    "persona1_celular",
-    "persona2_nombre",
-    "persona2_apellido",
-    "persona2_cedula",
-    "persona2_email",
-    "persona2_celular",
+    "Cedula",
+    "PrimerNombre",
+    "SegunNombre",
+    "PrimerApellido",
+    "SegApellido",
+    "Celular",
+    "Email",
+    "FirmaPrincipal",
+    "IdPais",
+    "IdProvincia",
+    "IdCiudad",
+    "Direccion",
+    "AlumnoNombre",
+    "AlumnoApellido",
+    "Curso",
+    "Fecha",
+    "Institucion",
 ]
 
 nombres = ["Ana", "Luis", "Maria", "Carlos", "Sofia", "Jorge", "Paula", "Diego", "Lucia", "Mateo"]
@@ -29,29 +34,34 @@ ws.title = "registros"
 ws.append(headers)
 
 for i in range(10):
-    n1 = nombres[i % len(nombres)]
-    a1 = apellidos[i % len(apellidos)]
-    n2 = nombres[(i + 3) % len(nombres)]
-    a2 = apellidos[(i + 5) % len(apellidos)]
-    ced1 = f"17{random.randint(10000000, 99999999)}"
-    ced2 = f"09{random.randint(10000000, 99999999)}"
-    email1 = f"{n1.lower()}.{a1.lower()}@correo.com"
-    email2 = f"{n2.lower()}.{a2.lower()}@correo.com"
-    cel1 = f"09{random.randint(10000000, 99999999)}"
-    cel2 = f"09{random.randint(10000000, 99999999)}"
+    alumno_nombre = nombres[i % len(nombres)]
+    alumno_apellido = apellidos[i % len(apellidos)]
+    primer_nombre = nombres[(i + 3) % len(nombres)]
+    segun_nombre = nombres[(i + 4) % len(nombres)]
+    primer_apellido = apellidos[(i + 5) % len(apellidos)]
+    seg_apellido = apellidos[(i + 6) % len(apellidos)]
+    cedula = f"09{random.randint(10000000, 99999999)}"
+    email = f"{primer_nombre.lower()}.{primer_apellido.lower()}@correo.com"
+    celular = f"09{random.randint(10000000, 99999999)}"
+    curso = f"{(i % 6) + 1}A"
     ws.append([
-        "Colegio Central",
+        cedula,
+        primer_nombre,
+        segun_nombre,
+        primer_apellido,
+        seg_apellido,
+        celular,
+        email,
+        1,
+        19,
+        17,
+        1701,
+        "Quito",
+        alumno_nombre,
+        alumno_apellido,
+        curso,
         date.today().isoformat(),
-        n1,
-        a1,
-        ced1,
-        email1,
-        cel1,
-        n2,
-        a2,
-        ced2,
-        email2,
-        cel2,
+        "Colegio Central",
     ])
 
 os.makedirs(os.path.dirname(out_path), exist_ok=True)

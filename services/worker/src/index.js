@@ -37,8 +37,10 @@ async function processPendingBatchGroups() {
   }
 }
 
-setInterval(processPendingBatches, 10000);
-setInterval(processPendingBatchGroups, 10000);
+setInterval(() => {
+  processPendingBatches();
+  processPendingBatchGroups();
+}, 10000);
 processPendingBatches();
 processPendingBatchGroups();
 

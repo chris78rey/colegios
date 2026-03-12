@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Solicitud de Matricula</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 16mm 14mm;
+    }
+
+    :root {
+      --ink: #0f172a;
+      --muted: #475569;
+      --border: #dbe3ef;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Arial", sans-serif;
+      color: var(--ink);
+      line-height: 1.42;
+      font-size: 13px;
+    }
+
+    .document {
+      border: 1px solid var(--border);
+      padding: 18px 20px;
+      max-width: 100%;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      text-align: center;
+      font-size: 22px;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+
+    .line {
+      margin-bottom: 10px;
+    }
+
+    .box {
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      margin: 12px 0;
+    }
+
+    .signature-block {
+      margin-top: 28px;
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }
+
+    .signature {
+      width: 220px;
+      margin: 0 auto;
+      padding-top: 10px;
+      text-align: center;
+      font-size: 13px;
+      border-top: 1px solid var(--ink);
+    }
+  </style>
+</head>
+<body>
+  <div class="document">
+    <h1>Solicitud de Matricula</h1>
+    <div class="subtitle">Formulario de solicitud para proceso de admision y firma remota del representante</div>
+
+    <div class="line">
+      Yo, <strong>{{PrimerNombre}} {{SegunNombre}} {{PrimerApellido}} {{SegApellido}}</strong>, identificado con documento
+      <strong>{{Cedula}}</strong>, en calidad de representante del alumno
+      <strong>{{AlumnoNombre}} {{AlumnoApellido}}</strong>, quien aspira a cursar el nivel o grado <strong>{{Curso}}</strong>,
+      presento formalmente esta solicitud de matricula y manifiesto de manera expresa mi interes en que sea tenido en
+      cuenta dentro del proceso de admision, vinculacion academica y formalizacion de matricula en la institucion.
+    </div>
+
+    <div class="line">
+      Esta solicitud se eleva con el proposito de que el estudiante pueda ser considerado dentro del proceso de
+      admision correspondiente, para lo cual autorizo la revision de la informacion aqui consignada y de los soportes
+      que sean requeridos por la institucion. Entiendo que la aceptacion definitiva de la matricula dependera del
+      cumplimiento de los criterios academicos, administrativos y reglamentarios establecidos para el periodo lectivo.
+    </div>
+
+    <div class="box">
+      <div><strong>Correo del representante:</strong> {{Email}}</div>
+      <div><strong>Celular del representante:</strong> {{Celular}}</div>
+      <div><strong>Direccion del representante:</strong> {{Direccion}}</div>
+      <div><strong>Institucion:</strong> {{Institucion}}</div>
+      <div><strong>Fecha de solicitud:</strong> {{Fecha}}</div>
+    </div>
+
+    <div class="line">
+      Declaro que la informacion suministrada para esta solicitud es veraz, completa y corresponde a los datos reales
+      del estudiante y de su representante responsable. Igualmente manifiesto que conozco que esta solicitud hace parte
+      del proceso institucional previo a la matricula y que su aprobacion estara sujeta a la validacion de la
+      informacion y de los requisitos definidos por la institucion educativa.
+    </div>
+
+    <div class="line">
+      De la misma forma, autorizo que este documento y las comunicaciones relacionadas con el tramite sean enviadas
+      para gestion de firma electronica al correo y al numero celular aqui registrados, entendiendo que dichos medios
+      seran utilizados para continuar el proceso desde casa de forma remota.
+    </div>
+
+    <div class="line">
+      Asimismo, manifiesto que conozco que la institucion podra solicitar aclaraciones, entrevistas, documentos
+      adicionales o validaciones posteriores cuando ello resulte necesario para completar el estudio de ingreso del
+      estudiante. Me comprometo a dar respuesta oportuna a dichos requerimientos dentro de los plazos que se indiquen
+      y por los canales oficialmente habilitados.
+    </div>
+
+    <div class="line">
+      Reconozco igualmente que la presente solicitud no constituye por si sola una aceptacion automatica o definitiva,
+      sino una manifestacion formal de voluntad para iniciar y adelantar el tramite correspondiente. En consecuencia,
+      la decision final sera comunicada por la institucion una vez se verifique el cumplimiento integral de las
+      condiciones pedagogicas, documentales y administrativas aplicables al proceso.
+    </div>
+
+    <div class="line">
+      Con la suscripcion de este formato dejo constancia de mi voluntad de adelantar la solicitud de matricula del
+      estudiante antes mencionado, asi como de atender oportunamente cualquier requerimiento adicional de informacion
+      o documentacion que la institucion considere necesario para finalizar el proceso.
+    </div>
+
+    <div class="line">
+      Finalmente, autorizo que la institucion conserve este documento como constancia de la solicitud presentada y lo
+      incorpore al expediente del estudiante para fines de control interno, seguimiento del proceso y soporte de las
+      actuaciones relacionadas con la admision y eventual formalizacion de la matricula.
+    </div>
+
+    <div class="signature-block">
+      <div class="signature">Firma del representante</div>
+    </div>
+  </div>
+</body>
+</html>

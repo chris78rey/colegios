@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   api:
     build:
@@ -12,12 +11,16 @@ services:
       - REDIS_URL=redis://redis:6379
       - STORAGE_PATH=/data/storage
       - API_BASE_URL=http://api:8080
-      - PDF_CONCURRENCY=2
-      - NODE_OPTIONS=--max-old-space-size=512
+      - BATCH_PREP_CONCURRENCY=${BATCH_PREP_CONCURRENCY:-2}
+      - PDF_CONCURRENCY=${PDF_CONCURRENCY:-1}
+      - NODE_OPTIONS=--max-old-space-size=${API_MAX_OLD_SPACE_SIZE:-384}
       - TZ=America/Guayaquil
       - SUPERADMIN_INIT_PASSWORD=000000
     volumes:
       - ./data/storage:/data/storage
+    mem_limit: 768m
+    mem_reservation: 256m
+    cpus: 1.00
     depends_on:
       - postgres
       - redis
@@ -28,9 +31,12 @@ services:
     deploy:
       resources:
         limits:
+          cpus: "1.00"
           memory: 768M
+        reservations:
+          memory: 256M
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health').then((res) => process.exit(res.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -60,17 +66,20 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/colegios
       - REDIS_URL=redis://redis:6379
       - STORAGE_PATH=/data/storage
-      - NODE_OPTIONS=--max-old-space-size=512
+      - NODE_OPTIONS=--max-old-space-size=${WORKER_MAX_OLD_SPACE_SIZE:-256}
       - TZ=America/Guayaquil
     volumes:
       - ./data/storage:/data/storage
+    mem_limit: 384m
+    mem_reservation: 128m
+    cpus: 0.50
     depends_on:
       - postgres
       - redis
     networks:
       - coolify
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8081/health"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8081/health').then((res) => process.exit(res.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -78,11 +87,17 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          cpus: "0.50"
+          memory: 384M
+        reservations:
+          memory: 128M
 
   web:
     image: nginx:1.27-alpine
     restart: unless-stopped
+    mem_limit: 96m
+    mem_reservation: 32m
+    cpus: 0.25
     depends_on:
       - api
     volumes:
@@ -93,6 +108,10 @@ services:
   postgres:
     image: postgres:16
     restart: unless-stopped
+    mem_limit: 512m
+    mem_reservation: 128m
+    cpus: 0.75
+    shm_size: 128m
     environment:
       - POSTGRES_DB=colegios
       - POSTGRES_USER=postgres
@@ -106,6 +125,9 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    mem_limit: 128m
+    mem_reservation: 32m
+    cpus: 0.25
     networks:
       - coolify
 

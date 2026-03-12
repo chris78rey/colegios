@@ -186,6 +186,8 @@ model Signatory {
   phone          String
   email          String
   sanitizedPhone String
+  role           String   @default("REPRESENTANTE_PRINCIPAL")
+  isPrimary      Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

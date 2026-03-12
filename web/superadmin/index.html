@@ -37,11 +37,67 @@
         },
       };
     </script>
+    <style>
+      :root {
+        --ui-line: #94a3b8;
+        --ui-line-strong: #334155;
+        --ui-soft-text: #334155;
+        --ui-muted-text: #475569;
+        --ui-focus-ring: rgba(25, 127, 230, 0.28);
+      }
+
+      .border-slate-200 {
+        border-color: var(--ui-line) !important;
+      }
+
+      .text-slate-400 {
+        color: var(--ui-muted-text) !important;
+      }
+
+      .text-slate-500,
+      .text-slate-600 {
+        color: var(--ui-soft-text) !important;
+      }
+
+      .bg-slate-50 {
+        background-color: #f8fafc !important;
+      }
+
+      button,
+      input,
+      select {
+        transition: box-shadow 120ms ease, border-color 120ms ease, background-color 120ms ease;
+      }
+
+      input[type="text"],
+      input[type="email"],
+      input[type="password"],
+      select,
+      button {
+        border-width: 2px !important;
+      }
+
+      input:focus-visible,
+      select:focus-visible,
+      button:focus-visible {
+        outline: 3px solid var(--ui-line-strong);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px var(--ui-focus-ring);
+      }
+
+      table thead {
+        color: #334155 !important;
+      }
+
+      table tbody tr:nth-child(even) {
+        background: rgba(248, 250, 252, 0.95);
+      }
+    </style>
   </head>
   <body class="bg-mist font-display text-ink">
     <div class="min-h-screen">
       <div id="debug-errors" class="hidden fixed bottom-6 right-6 max-w-sm rounded-xl border border-red-200 bg-white p-4 text-xs text-red-700 shadow-soft"></div>
-      <header class="bg-white border-b border-slate-200">
+      <header class="bg-white border-b-2 border-slate-200">
         <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div class="flex items-center gap-3">
             <span class="material-symbols-outlined text-primary">school</span>
@@ -61,14 +117,14 @@
 
       <main class="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
         <section class="grid gap-4 sm:grid-cols-2">
-          <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
+          <div class="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-soft">
             <div class="flex items-center justify-between">
               <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Instituciones</p>
               <span class="text-slate-400" title="Cantidad de colegios registrados y habilitados.">?</span>
             </div>
             <p class="mt-2 text-3xl font-bold" id="org-count">0</p>
           </div>
-          <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
+          <div class="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-soft">
             <div class="flex items-center justify-between">
               <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Solicitudes activas</p>
               <span class="text-slate-400" title="Firmas en proceso: pendientes o enviadas, no finalizadas.">?</span>
@@ -77,7 +133,7 @@
           </div>
         </section>
 
-        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
+        <section class="rounded-2xl border-2 border-slate-200 bg-white p-6 shadow-soft">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 class="text-xl font-bold">Colegios registrados</h2>
@@ -85,7 +141,7 @@
             </div>
             <div class="flex flex-wrap gap-2">
               <input
-                class="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                class="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm"
                 id="org-name"
                 placeholder="Nombre de institucion"
                 type="text"
@@ -118,17 +174,17 @@
           </div>
         </section>
 
-        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft">
+        <section class="rounded-2xl border-2 border-slate-200 bg-white p-6 shadow-soft">
           <h2 class="text-xl font-bold">Crear usuario ADMIN</h2>
           <div class="mt-4 grid gap-3 sm:grid-cols-3">
-            <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm" id="admin-email" placeholder="correo@colegio.edu" type="email" />
+            <input class="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm" id="admin-email" placeholder="correo@colegio.edu" type="email" />
             <div class="relative">
-              <input class="w-full rounded-xl border border-slate-200 px-3 py-2 pr-12 text-sm" id="user-password" placeholder="Password" type="password" value="ABC123#" />
+              <input class="w-full rounded-xl border-2 border-slate-200 px-3 py-2 pr-12 text-sm" id="user-password" placeholder="Password" type="password" value="ABC123#" />
               <button class="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-blue-600" id="toggle-user-password" type="button">
                 Ver
               </button>
             </div>
-            <select class="rounded-xl border border-slate-200 px-3 py-2 text-sm" id="user-org">
+            <select class="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm" id="user-org">
               <option value="">Selecciona institucion...</option>
             </select>
           </div>
@@ -139,7 +195,7 @@
           <div class="mt-6">
             <div class="flex items-center justify-between gap-2">
               <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Usuarios registrados</p>
-              <select class="rounded-lg border border-slate-200 px-3 py-1 text-xs" id="user-filter">
+              <select class="rounded-lg border-2 border-slate-200 px-3 py-1 text-xs" id="user-filter">
                 <option value="">Todos</option>
               </select>
             </div>

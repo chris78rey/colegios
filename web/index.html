@@ -54,10 +54,55 @@
       };
     </script>
     <style>
+      :root {
+        --ui-line: #94a3b8;
+        --ui-line-strong: #475569;
+        --ui-soft-text: #334155;
+        --ui-muted-text: #475569;
+        --ui-focus-ring: rgba(25, 127, 230, 0.28);
+      }
+
+      .border-slate-200 {
+        border-color: var(--ui-line) !important;
+      }
+
+      .text-slate-400 {
+        color: var(--ui-muted-text) !important;
+      }
+
+      .text-slate-500,
+      .text-slate-600 {
+        color: var(--ui-soft-text) !important;
+      }
+
+      .bg-slate-50 {
+        background-color: #f8fafc !important;
+      }
+
       .grid-glow {
         background-image: radial-gradient(circle at top, rgba(25, 127, 230, 0.2), transparent 45%),
           radial-gradient(circle at 20% 40%, rgba(107, 183, 255, 0.2), transparent 35%),
           radial-gradient(circle at 80% 10%, rgba(15, 23, 42, 0.08), transparent 40%);
+      }
+
+      input,
+      button,
+      a {
+        transition: box-shadow 120ms ease, border-color 120ms ease, transform 120ms ease;
+      }
+
+      input[type="email"],
+      input[type="password"],
+      input[type="text"] {
+        border-width: 2px !important;
+      }
+
+      input:focus-visible,
+      button:focus-visible,
+      a:focus-visible {
+        outline: 3px solid var(--ui-line-strong);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px var(--ui-focus-ring);
       }
     </style>
   </head>
@@ -81,19 +126,19 @@
             Centraliza la gestion de firmas, controla tus cargas masivas y monitorea el estado de tus solicitudes en tiempo real.
           </p>
           <div class="grid gap-4 sm:grid-cols-2">
-            <div class="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-soft backdrop-blur">
+            <div class="rounded-2xl border-2 border-slate-200 bg-white/85 p-4 shadow-soft backdrop-blur">
               <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Seguridad</p>
               <p class="mt-2 text-sm font-semibold text-slate-700">Autenticacion por institucion y roles.</p>
             </div>
-            <div class="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-soft backdrop-blur">
+            <div class="rounded-2xl border-2 border-slate-200 bg-white/85 p-4 shadow-soft backdrop-blur">
               <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Trazabilidad</p>
               <p class="mt-2 text-sm font-semibold text-slate-700">Auditoria de cada evento de firma.</p>
             </div>
-            <div class="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-soft backdrop-blur">
+            <div class="rounded-2xl border-2 border-slate-200 bg-white/85 p-4 shadow-soft backdrop-blur">
               <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Carga masiva</p>
               <p class="mt-2 text-sm font-semibold text-slate-700">Excel validado y procesamiento en cola.</p>
             </div>
-            <div class="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-soft backdrop-blur">
+            <div class="rounded-2xl border-2 border-slate-200 bg-white/85 p-4 shadow-soft backdrop-blur">
               <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Soporte</p>
               <p class="mt-2 text-sm font-semibold text-slate-700">Canal directo para tu equipo.</p>
             </div>
@@ -101,7 +146,7 @@
         </section>
 
         <section class="w-full max-w-lg animate-fade" style="animation-delay: 120ms">
-          <div class="rounded-3xl border border-slate-200 bg-white/80 p-8 shadow-soft backdrop-blur">
+          <div class="rounded-3xl border-2 border-slate-200 bg-white/88 p-8 shadow-soft backdrop-blur">
             <div class="flex items-center justify-between">
               <div>
                 <h2 class="text-2xl font-bold text-ink">Iniciar sesion</h2>
@@ -115,7 +160,7 @@
                 <span class="text-sm font-semibold text-slate-700">Correo</span>
                 <input
                   id="email"
-                  class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-primary focus:ring-primary"
+                  class="mt-2 w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm focus:border-primary focus:ring-primary"
                   placeholder="admin@institucion.edu"
                   type="email"
                 />
@@ -125,7 +170,7 @@
                 <div class="relative mt-2">
                   <input
                     id="password"
-                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm focus:border-primary focus:ring-primary"
+                    class="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 pr-12 text-sm focus:border-primary focus:ring-primary"
                     placeholder="********"
                     type="password"
                   />
@@ -156,7 +201,7 @@
               </button>
             </form>
 
-            <div class="mt-4 hidden rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700" id="login-message"></div>
+            <div class="mt-4 hidden rounded-lg border-2 border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700" id="login-message"></div>
 
             <div class="mt-6 flex items-center justify-between text-xs text-slate-500">
               <span>Necesitas acceso? Contacta a soporte.</span>
@@ -221,13 +266,18 @@
             message.textContent = `Bienvenido, ${data.user.email} (${data.user.role}).`;
             message.classList.add("border-emerald-200", "text-emerald-700");
             try {
-              window.localStorage.setItem("auth_email", data.user.email);
-              window.localStorage.setItem("auth_role", data.user.role);
-              if (data.user.organizationId) {
-                window.localStorage.setItem("auth_org_id", data.user.organizationId);
-              }
+              const storages = [window.localStorage, window.sessionStorage];
+              storages.forEach((storage) => {
+                storage.setItem("auth_email", data.user.email);
+                storage.setItem("auth_role", data.user.role);
+                if (data.user.organizationId) {
+                  storage.setItem("auth_org_id", data.user.organizationId);
+                } else {
+                  storage.removeItem("auth_org_id");
+                }
+              });
             } catch (storageError) {
-              // ignore storage errors (private mode)
+              showDebug(`Storage Error: ${storageError?.message || storageError}`);
             }
 
             if (data.user.role === "ADMIN") {

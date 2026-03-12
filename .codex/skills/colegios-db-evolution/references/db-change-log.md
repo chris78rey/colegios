@@ -13,3 +13,9 @@
 - Summary: Added Template fields for name, placeholders, requiredColumns, and status.
 - Backfill: Defaults apply to existing rows (name='Plantilla', status='active').
 - Rollback: Remove new columns (avoid in production).
+
+## 2026-03-11
+- Migration: 20260311173000_add_signatory_role_and_primary
+- Summary: Added Signatory role and primary signer flags to preserve who signs enrollment requests.
+- Backfill: Existing signatories receive defaults role='REPRESENTANTE_PRINCIPAL' and isPrimary=true.
+- Rollback: Drop the new columns in a later controlled migration if truly needed.

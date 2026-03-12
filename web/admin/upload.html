@@ -39,18 +39,77 @@
       };
     </script>
     <style>
+      :root {
+        --ui-line: #94a3b8;
+        --ui-line-strong: #334155;
+        --ui-soft-text: #334155;
+        --ui-muted-text: #475569;
+        --ui-focus-ring: rgba(25, 127, 230, 0.28);
+      }
+
+      .border-slate-200 {
+        border-color: var(--ui-line) !important;
+      }
+
+      .text-slate-400 {
+        color: var(--ui-muted-text) !important;
+      }
+
+      .text-slate-500,
+      .text-slate-600 {
+        color: var(--ui-soft-text) !important;
+      }
+
+      .bg-slate-50 {
+        background-color: #f8fafc !important;
+      }
+
       body {
         background:
           radial-gradient(1200px 600px at 10% -10%, rgba(25, 127, 230, 0.12), transparent 55%),
           radial-gradient(900px 500px at 90% 0%, rgba(14, 165, 233, 0.1), transparent 60%),
           #f6f7f8;
       }
+
+      button,
+      input,
+      select,
+      label,
+      iframe {
+        transition: box-shadow 120ms ease, border-color 120ms ease, background-color 120ms ease;
+      }
+
+      input[type="text"],
+      input[type="email"],
+      input[type="password"],
+      select,
+      button,
+      label[class*="border"] {
+        border-width: 2px !important;
+      }
+
+      input:focus-visible,
+      select:focus-visible,
+      button:focus-visible,
+      label:focus-within {
+        outline: 3px solid var(--ui-line-strong);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px var(--ui-focus-ring);
+      }
+
+      table thead {
+        color: #334155 !important;
+      }
+
+      table tbody tr:nth-child(even) {
+        background: rgba(248, 250, 252, 0.95);
+      }
     </style>
   </head>
   <body class="bg-mist font-display text-ink">
     <div class="min-h-screen">
       <div id="debug-errors" class="hidden fixed bottom-6 right-6 max-w-sm rounded-xl border border-red-200 bg-white p-4 text-xs text-red-700 shadow-soft"></div>
-      <header class="bg-white border-b border-slate-200">
+      <header class="bg-white border-b-2 border-slate-200">
         <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div class="flex items-center gap-3">
             <span class="material-symbols-outlined text-primary">school</span>
@@ -69,79 +128,62 @@
       </header>
 
       <main class="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
-        <div class="rounded-2xl border border-slate-200 bg-white p-3 shadow-soft">
+        <div class="rounded-2xl border-2 border-slate-200 bg-white p-3 shadow-soft">
           <div class="flex flex-wrap items-center gap-2">
-            <button class="tab-btn rounded-full px-4 py-2 text-sm font-semibold text-slate-600" data-tab-button="plantillas" type="button">
+            <button class="tab-btn rounded-full border-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-600" data-tab-button="plantillas" type="button">
               Plantillas
             </button>
-            <button class="tab-btn rounded-full px-4 py-2 text-sm font-semibold text-slate-600" data-tab-button="excel" type="button">
+            <button class="tab-btn rounded-full border-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-600" data-tab-button="excel" type="button">
               Excel y Mapeo
             </button>
-            <button class="tab-btn rounded-full px-4 py-2 text-sm font-semibold text-slate-600" data-tab-button="preview" type="button">
+            <button class="tab-btn rounded-full border-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-600" data-tab-button="preview" type="button">
               Preview y Procesar
             </button>
-            <button class="tab-btn rounded-full px-4 py-2 text-sm font-semibold text-slate-600" data-tab-button="files" type="button">
+            <button class="tab-btn rounded-full border-2 border-transparent px-4 py-2 text-sm font-semibold text-slate-600" data-tab-button="files" type="button">
               Archivos
             </button>
           </div>
           <div class="mt-2 hidden rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700" id="tab-message"></div>
         </div>
 
-        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft" data-tab-panel="plantillas">
+        <section class="rounded-2xl border-2 border-slate-200 bg-white p-6 shadow-soft" data-tab-panel="plantillas">
           <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h2 class="text-xl font-bold">1. Plantilla Word o HTML con placeholders</h2>
               <p class="mt-2 text-sm text-slate-500">
                 Sube tu plantilla .docx o .html con placeholders tipo <span class="font-semibold">{{nombre_estudiante}}</span>.
-                Aqui solo mostramos un ejemplo y la vista previa.
+                Puedes seleccionar una o varias plantillas para procesarlas con el mismo Excel.
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
-              <span class="text-xs uppercase tracking-[0.2em] text-slate-400">Modo de lote</span>
-              <div class="flex items-center rounded-full bg-slate-100 p-1">
-                <button
-                  class="rounded-full px-4 py-1 text-xs font-semibold text-slate-600 transition"
-                  id="mode-template"
-                  type="button"
-                >
-                  Plantilla unica
-                </button>
-                <button
-                  class="rounded-full px-4 py-1 text-xs font-semibold text-slate-600 transition"
-                  id="mode-group"
-                  type="button"
-                >
-                  Grupo de plantillas
-                </button>
-              </div>
               <span class="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white" id="active-group-chip">
-                Grupo seleccionado: Ninguno
+                Flujo activo: Lote multi-plantilla
               </span>
             </div>
           </div>
 
           <div class="mt-5 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div class="rounded-2xl border-2 border-slate-200 bg-slate-50 p-5">
               <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Sube y nombra tu plantilla</p>
               <div class="mt-3 flex flex-wrap items-center gap-3">
                 <input
-                  class="min-w-[240px] flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  class="min-w-[240px] flex-1 rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm"
                   id="template-name-input"
                   placeholder="Nombre de plantilla"
                   type="text"
                   value="Solicitud Matricula"
                 />
-                <label class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm">
+                <label class="inline-flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm">
                   <span class="material-symbols-outlined text-sm">upload_file</span>
                   Subir plantilla(s)
                   <input class="hidden" id="template-input" type="file" accept=".docx,.html,.htm" multiple />
                 </label>
               </div>
               <p class="mt-3 text-xs text-slate-400" id="template-name">Ninguna plantilla subida.</p>
-              <div class="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-                <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Plantilla activa</p>
+              <div class="mt-4 rounded-xl border-2 border-slate-200 bg-white p-4">
+                <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Plantillas seleccionadas</p>
                 <p class="mt-2 text-sm text-slate-600">
-                  Descarga el Excel de carga para obtener los encabezados y llenar los datos.
+                  Descarga el Excel de carga con la union de campos de las plantillas seleccionadas.
                 </p>
                 <div class="mt-3 flex flex-wrap items-center gap-2">
                   <button
@@ -152,93 +194,148 @@
                     <span class="material-symbols-outlined text-sm">download</span>
                     Descargar Excel de carga
                   </button>
-                  <span class="text-xs text-slate-400">Usa este Excel como plantilla de columnas.</span>
+                  <button
+                    class="inline-flex items-center gap-2 rounded-lg border-2 border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm"
+                    id="download-example-excel"
+                    type="button"
+                  >
+                    <span class="material-symbols-outlined text-sm">table_view</span>
+                    Descargar Excel ejemplo
+                  </button>
+                  <button
+                    class="inline-flex items-center gap-2 rounded-lg border-2 border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm"
+                    id="download-example-base"
+                    type="button"
+                  >
+                    <span class="material-symbols-outlined text-sm">description</span>
+                    Descargar HTML base
+                  </button>
+                  <button
+                    class="inline-flex items-center gap-2 rounded-lg border-2 border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm"
+                    id="download-example-matricula"
+                    type="button"
+                  >
+                    <span class="material-symbols-outlined text-sm">article</span>
+                    Descargar ejemplo matricula
+                  </button>
+                  <span class="text-xs text-slate-400" id="selection-summary">Selecciona al menos una plantilla.</span>
+                </div>
+                <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700" id="pdf-count-summary">
+                  Aun no hay suficientes datos para calcular cuantos PDFs se generaran.
                 </div>
               </div>
             </div>
-            <div class="rounded-2xl border border-slate-200 bg-white p-5">
+            <div class="rounded-2xl border-2 border-slate-200 bg-white p-5">
               <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Plantillas disponibles</p>
-              <div class="mt-3 flex flex-wrap items-center gap-3">
-                <select class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm" id="template-select">
-                  <option value="">Selecciona una plantilla...</option>
-                </select>
+              <div class="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-500">
+                Marca con checkbox las plantillas que quieres generar con el mismo Excel.
               </div>
+              <select class="hidden" id="template-select" multiple></select>
               <ul class="mt-3 space-y-2 text-sm text-slate-700" id="template-list">
                 <li>No hay plantillas cargadas.</li>
               </ul>
             </div>
           </div>
 
-          <div class="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Grupos de plantillas</p>
-              <span class="text-xs text-slate-400">Maximo 4 plantillas por grupo</span>
-            </div>
-            <div class="mt-4 grid gap-4 lg:grid-cols-2">
-              <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p class="text-sm font-semibold text-slate-700">Crear grupo</p>
-                <input
-                  class="mt-3 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                  id="group-name-input"
-                  placeholder="Nombre del grupo"
-                  type="text"
-                />
-                <div class="mt-3 space-y-2 text-sm text-slate-700" id="group-template-list">
-                  <p class="text-xs text-slate-500">Carga plantillas para poder crear grupos.</p>
-                </div>
-                <button
-                  class="mt-4 w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-                  id="create-group"
-                  type="button"
-                >
-                  Crear grupo
-                </button>
-                <p class="mt-2 text-xs text-slate-500" id="group-message"></p>
+          <div class="mt-5 rounded-2xl border-2 border-slate-200 bg-white p-5">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Simplificacion del flujo</p>
+            <p class="mt-3 text-sm text-slate-600">
+              No usamos grupos persistentes. Seleccionas varias plantillas en el momento, cargas un solo Excel y el
+              sistema genera un PDF por plantilla para cada registro.
+            </p>
+          </div>
+
+          <div class="mt-5 rounded-2xl border-2 border-slate-200 bg-white p-5">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Prompt agnostico para LLM</p>
+                <p class="mt-2 text-sm text-slate-600">
+                  Escribe el tipo de documento y genera un prompt listo para pegar en tu LLM preferido.
+                </p>
               </div>
-              <div class="rounded-xl border border-slate-200 bg-white p-4">
-                <div class="flex items-center justify-between">
-                  <p class="text-sm font-semibold text-slate-700">Seleccionar grupo</p>
-                  <span class="text-xs text-slate-400">Haz clic sobre un grupo para activarlo</span>
+            </div>
+
+            <div class="mt-4 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+              <div class="rounded-xl border-2 border-slate-200 bg-slate-50 p-4">
+                <label class="block text-sm font-semibold text-slate-700" for="prompt-doc-type">Tipo de documento</label>
+                <input
+                  class="mt-2 w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm"
+                  id="prompt-doc-type"
+                  placeholder="Ejemplo: hoja de permiso, autorizacion de salida, compromiso de pago"
+                  type="text"
+                  value="hoja de permiso escolar"
+                />
+
+                <label class="mt-4 block text-sm font-semibold text-slate-700" for="prompt-doc-context">Contexto adicional</label>
+                <textarea
+                  class="mt-2 h-40 w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                  id="prompt-doc-context"
+                  placeholder="Ejemplo: firmado por el representante, incluye datos del alumno, motivo, fechas y bloque final de firma."
+                >Firmado por el representante del estudiante. Debe incluir encabezado institucional, datos del alumno, texto principal del documento y bloque final de firma.</textarea>
+
+                <div class="mt-4 flex flex-wrap gap-2">
+                  <button
+                    class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                    id="generate-agnostic-prompt"
+                    type="button"
+                  >
+                    Generar prompt
+                  </button>
+                  <button
+                    class="rounded-lg border-2 border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+                    id="copy-agnostic-prompt"
+                    type="button"
+                  >
+                    Copiar prompt
+                  </button>
                 </div>
-                <select class="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" id="group-select">
-                  <option value="">Selecciona un grupo...</option>
-                </select>
-                <ul class="mt-3 space-y-3 text-sm text-slate-700" id="group-list">
-                  <li>No hay grupos creados.</li>
-                </ul>
-                <button
-                  class="mt-4 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700"
-                  id="update-group"
-                  type="button"
-                >
-                  Actualizar grupo seleccionado
-                </button>
+              </div>
+
+              <div class="rounded-xl border-2 border-slate-200 bg-slate-50 p-4">
+                <div class="flex items-center justify-between gap-3">
+                  <h3 class="text-sm font-semibold text-slate-800">Prompt generado</h3>
+                  <span class="text-xs text-slate-400">Listo para pegar en el LLM</span>
+                </div>
+                <textarea
+                  class="mt-3 h-80 w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-700"
+                  id="prompt-agnostico"
+                  readonly
+                ></textarea>
               </div>
             </div>
           </div>
         </section>
 
-        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft" data-tab-panel="excel">
+        <section class="rounded-2xl border-2 border-slate-200 bg-white p-6 shadow-soft" data-tab-panel="excel">
           <h2 class="text-xl font-bold">2. Subir archivo</h2>
           <p class="mt-2 text-sm text-slate-500">Acepta .xlsx o .csv. Solo se muestra el preview.</p>
-          <label class="mt-4 flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-white px-6 py-10 text-center shadow-sm">
+          <label class="mt-4 flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-[3px] border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-white px-6 py-10 text-center shadow-sm">
             <span class="material-symbols-outlined text-4xl text-slate-400">upload_file</span>
             <span class="text-sm font-semibold">Selecciona tu archivo</span>
             <input class="hidden" id="file-input" type="file" accept=".csv,.xlsx" />
           </label>
           <div class="mt-4 text-sm text-slate-600" id="file-name">Ningun archivo seleccionado.</div>
-          <div class="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
+          <div class="mt-6 rounded-2xl border-2 border-slate-200 bg-white p-5">
             <div class="flex items-center justify-between">
-              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Mapeo Excel -> Placeholders</p>
-              <span class="text-xs text-slate-400">Intentamos hacer match automatico por nombre.</span>
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Validacion de columnas</p>
+              <span class="text-xs text-slate-400">La columna del Excel debe coincidir exactamente con el placeholder.</span>
             </div>
-            <div class="mt-3 grid gap-3 sm:grid-cols-2" id="mapping-grid">
-              <div class="text-sm text-slate-500">Carga un Excel para mapear columnas.</div>
+            <div class="mt-3 space-y-3" id="mapping-grid">
+              <div class="text-sm text-slate-500">Carga un Excel para validar columnas obligatorias.</div>
+            </div>
+          </div>
+          <div class="mt-6 rounded-2xl border-2 border-slate-200 bg-white p-5">
+            <div class="flex items-center justify-between">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Validacion de datos por plantilla</p>
+              <span class="text-xs text-slate-400">Cada plantilla debe encontrar valor en cada placeholder requerido.</span>
+            </div>
+            <div class="mt-3 space-y-3" id="data-validation-grid">
+              <div class="text-sm text-slate-500">Carga un Excel para validar filas con datos faltantes.</div>
             </div>
           </div>
         </section>
 
-        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft" data-tab-panel="preview">
+        <section class="rounded-2xl border-2 border-slate-200 bg-white p-6 shadow-soft" data-tab-panel="preview">
           <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 class="text-xl font-bold">3. Preview</h2>
@@ -246,14 +343,14 @@
             </div>
             <div class="flex flex-wrap items-center gap-2">
               <button
-                class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
+                class="rounded-xl border-2 border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
                 id="select-all"
                 type="button"
               >
                 Seleccionar todo
               </button>
               <button
-                class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
+                class="rounded-xl border-2 border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
                 id="select-none"
                 type="button"
               >
@@ -264,11 +361,14 @@
                 Enviar correos (pendiente)
               </button>
               <button class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm" id="process-batch" type="button">
-                Procesar lote
+                Generar PDFs
               </button>
             </div>
           </div>
           <p class="mt-3 text-xs text-slate-500" id="batch-message"></p>
+          <div class="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700" id="batch-status-panel">
+            El lote aun no se ha generado.
+          </div>
           <div class="mt-4 overflow-x-auto">
             <table class="min-w-full text-left text-sm">
               <thead class="bg-slate-50 text-slate-500">
@@ -303,7 +403,7 @@
           </div>
         </section>
 
-        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-soft" data-tab-panel="files">
+        <section class="rounded-2xl border-2 border-slate-200 bg-white p-6 shadow-soft" data-tab-panel="files">
           <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 class="text-xl font-bold">4. Archivos generados</h2>
@@ -326,13 +426,13 @@
     </div>
 
     <div class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4" id="pdf-modal">
-      <div class="flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-soft">
-        <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+      <div class="flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-soft">
+        <div class="flex items-center justify-between border-b-2 border-slate-200 px-4 py-3">
           <div>
             <p class="text-sm font-semibold text-slate-900">Vista previa PDF</p>
             <p class="text-xs text-slate-500" id="pdf-modal-title">Documento</p>
           </div>
-          <button class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600" id="pdf-modal-close">
+          <button class="rounded-lg border-2 border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600" id="pdf-modal-close">
             Cerrar
           </button>
         </div>
@@ -357,21 +457,29 @@
         showDebug(`Promise Error: ${event.reason}`);
       });
 
+      function readStoredAuthValue(key) {
+        return window.localStorage.getItem(key) || window.sessionStorage.getItem(key) || "";
+      }
+
+      function clearStoredAuth() {
+        [window.localStorage, window.sessionStorage].forEach((storage) => {
+          storage.removeItem("auth_email");
+          storage.removeItem("auth_role");
+          storage.removeItem("auth_org_id");
+        });
+      }
+
       function requireAuth(allowedRoles) {
-        const email = window.localStorage.getItem("auth_email");
-        const role = window.localStorage.getItem("auth_role");
-        const orgId = window.localStorage.getItem("auth_org_id");
-        if (!email || !role || !orgId) {
-          window.localStorage.removeItem("auth_email");
-          window.localStorage.removeItem("auth_role");
-          window.localStorage.removeItem("auth_org_id");
+        const email = readStoredAuthValue("auth_email");
+        const role = readStoredAuthValue("auth_role");
+        const orgId = readStoredAuthValue("auth_org_id");
+        if (!email || !role) {
+          clearStoredAuth();
           window.location.href = "/";
           return null;
         }
         if (allowedRoles && !allowedRoles.includes(role)) {
-          window.localStorage.removeItem("auth_email");
-          window.localStorage.removeItem("auth_role");
-          window.localStorage.removeItem("auth_org_id");
+          clearStoredAuth();
           window.location.href = "/";
           return null;
         }
@@ -393,49 +501,70 @@
       const mappingGrid = document.getElementById("mapping-grid");
       const processBatchBtn = document.getElementById("process-batch");
       const batchMessage = document.getElementById("batch-message");
-      const groupSelect = document.getElementById("group-select");
-      const groupList = document.getElementById("group-list");
-      const groupNameInput = document.getElementById("group-name-input");
-      const groupTemplateList = document.getElementById("group-template-list");
-      const groupMessage = document.getElementById("group-message");
-      const createGroupBtn = document.getElementById("create-group");
-      const updateGroupBtn = document.getElementById("update-group");
       const activeGroupChip = document.getElementById("active-group-chip");
       const downloadExcelBtn = document.getElementById("download-excel");
+      const downloadExampleExcelBtn = document.getElementById("download-example-excel");
+      const downloadExampleBaseBtn = document.getElementById("download-example-base");
+      const downloadExampleMatriculaBtn = document.getElementById("download-example-matricula");
+      const selectionSummary = document.getElementById("selection-summary");
+      const pdfCountSummary = document.getElementById("pdf-count-summary");
+      const dataValidationGrid = document.getElementById("data-validation-grid");
       const loadFilesBtn = document.getElementById("load-files");
       const filesList = document.getElementById("files-list");
       const filesMessage = document.getElementById("files-message");
+      const batchStatusPanel = document.getElementById("batch-status-panel");
       const pdfModal = document.getElementById("pdf-modal");
       const pdfModalFrame = document.getElementById("pdf-modal-frame");
       const pdfModalClose = document.getElementById("pdf-modal-close");
       const pdfModalTitle = document.getElementById("pdf-modal-title");
-      const modeTemplateBtn = document.getElementById("mode-template");
-      const modeGroupBtn = document.getElementById("mode-group");
       const tabMessage = document.getElementById("tab-message");
+      const promptDocTypeInput = document.getElementById("prompt-doc-type");
+      const promptDocContextInput = document.getElementById("prompt-doc-context");
+      const generateAgnosticPromptBtn = document.getElementById("generate-agnostic-prompt");
+      const copyAgnosticPromptBtn = document.getElementById("copy-agnostic-prompt");
+      const agnosticPromptOutput = document.getElementById("prompt-agnostico");
       const tabButtons = Array.from(document.querySelectorAll("[data-tab-button]"));
       const tabPanels = Array.from(document.querySelectorAll("[data-tab-panel]"));
       let activeTab = "plantillas";
-      let currentPlaceholders = ["nombre_estudiante", "representante", "correo", "celular", "institucion"];
+      let currentPlaceholders = [
+        "Cedula",
+        "PrimerNombre",
+        "SegunNombre",
+        "PrimerApellido",
+        "SegApellido",
+        "Celular",
+        "Email",
+        "FirmaPrincipal",
+        "IdPais",
+        "IdProvincia",
+        "IdCiudad",
+        "Direccion",
+        "AlumnoNombre",
+        "AlumnoApellido",
+        "Curso",
+        "Fecha",
+        "Institucion",
+      ];
       let currentHeaders = [];
       let currentRows = [];
       let templates = [];
-      let groups = [];
       let batchLocked = false;
-      let selectedTemplateId = "";
-      let selectedGroupId = "";
-      let useGroupMode = false;
+      let selectedTemplateIds = [];
       let placeholderUsage = {};
       let templateNameTouched = false;
       let lastBatchId = "";
-      let lastBatchMode = "template";
+      let lastBatchMode = "single";
+      let lastBatchStatus = "";
+      let batchStatusPollTimer = null;
+      let currentRowValidation = { missingColumns: [], missingValues: [] };
       const selectAllBtn = document.getElementById("select-all");
       const selectNoneBtn = document.getElementById("select-none");
       const selectedCount = document.getElementById("selected-count");
 
-      const storedEmail = auth?.email || window.localStorage.getItem("auth_email");
+      const storedEmail = auth?.email || readStoredAuthValue("auth_email");
       if (storedEmail) userEmail.textContent = storedEmail;
-      const storedOrgId = auth?.orgId || window.localStorage.getItem("auth_org_id");
-      const storedRole = auth?.role || window.localStorage.getItem("auth_role");
+      const storedOrgId = auth?.orgId || readStoredAuthValue("auth_org_id");
+      const storedRole = auth?.role || readStoredAuthValue("auth_role");
       const apiBase =
         window.API_BASE_URL ||
         (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
@@ -443,80 +572,264 @@
           : window.location.origin);
 
       document.getElementById("logout").addEventListener("click", () => {
-        window.localStorage.removeItem("auth_email");
-        window.localStorage.removeItem("auth_role");
+        clearStoredAuth();
         window.location.href = "/";
       });
+
+      function buildAgnosticPrompt() {
+        const documentType = (promptDocTypeInput?.value || "").trim() || "documento institucional";
+        const extraContext = (promptDocContextInput?.value || "").trim();
+        return `Genera una plantilla HTML formal, lista para impresion en A4, para ${documentType}, con placeholders dinamicos.
+
+Objetivo:
+- La plantilla debe poder llenarse automaticamente desde un Excel donde cada columna coincide exactamente con un placeholder del documento.
+
+Reglas obligatorias:
+- Usa placeholders exactos con formato {{NombreCampo}}.
+- No inventes aliases ni nombres alternos.
+- Si el documento requiere firma de un representante, incluye obligatoriamente estos placeholders canonicos:
+  {{Cedula}}
+  {{PrimerNombre}}
+  {{SegunNombre}}
+  {{PrimerApellido}}
+  {{SegApellido}}
+  {{Celular}}
+  {{Email}}
+  {{FirmaPrincipal}}
+  {{IdPais}}
+  {{IdProvincia}}
+  {{IdCiudad}}
+  {{Direccion}}
+
+- Si el documento necesita datos adicionales, agregalos tambien como placeholders exactos, por ejemplo:
+  {{AlumnoNombre}}
+  {{AlumnoApellido}}
+  {{Curso}}
+  {{Fecha}}
+  {{Institucion}}
+  {{Motivo}}
+  {{Observaciones}}
+  {{CodigoDocumento}}
+  {{Periodo}}
+
+Contexto del documento:
+- ${extraContext || "Define una estructura institucional clara con encabezado, cuerpo principal, datos variables y bloque final de firma."}
+
+Instrucciones:
+- Redacta el documento en espanol formal.
+- Usa una estructura clara: encabezado, titulo, cuerpo principal, datos variables y bloque final de firma.
+- Asegura que el HTML sea limpio y facil de convertir a PDF.
+- Incluye CSS de impresion para A4.
+- Evita grandes espacios vacios antes de la firma.
+- Devuelve solo el HTML completo.`;
+      }
+
+      function refreshAgnosticPrompt() {
+        if (!agnosticPromptOutput) return;
+        agnosticPromptOutput.value = buildAgnosticPrompt();
+      }
+
+      if (generateAgnosticPromptBtn) {
+        generateAgnosticPromptBtn.addEventListener("click", refreshAgnosticPrompt);
+      }
+
+      if (copyAgnosticPromptBtn) {
+        copyAgnosticPromptBtn.addEventListener("click", async () => {
+          try {
+            refreshAgnosticPrompt();
+            await navigator.clipboard.writeText(agnosticPromptOutput.value);
+            const originalText = copyAgnosticPromptBtn.textContent;
+            copyAgnosticPromptBtn.textContent = "Copiado";
+            window.setTimeout(() => {
+              copyAgnosticPromptBtn.textContent = originalText;
+            }, 1200);
+          } catch (error) {
+            batchMessage.textContent = "No se pudo copiar el prompt.";
+          }
+        });
+      }
 
       templateNameInput.addEventListener("input", () => {
         templateNameTouched = true;
       });
 
-      function setSelectedTemplate(id) {
-        selectedTemplateId = id || "";
-        const selected = templates.find((t) => t.id === selectedTemplateId);
-        if (selected && Array.isArray(selected.placeholders)) {
-          currentPlaceholders = selected.placeholders;
-          placeholderUsage = {};
-          if (placeholderList) {
-            placeholderList.innerHTML = selected.placeholders.map((p) => `<li>{{${p}}}</li>`).join("");
-          }
+      function updateSelectionSummary() {
+        if (!selectionSummary) return;
+        if (!selectedTemplateIds.length) {
+          selectionSummary.textContent = "Selecciona al menos una plantilla.";
+          return;
         }
-        renderMapping();
-        updateTabStates();
+        const names = templates
+          .filter((tpl) => selectedTemplateIds.includes(tpl.id))
+          .map((tpl) => templateDisplayName(tpl));
+        selectionSummary.textContent = `${selectedTemplateIds.length} plantilla(s): ${names.join(", ")}`;
       }
 
-      function getGroupPlaceholderInfo(group) {
-        const usage = {};
-        const placeholders = [];
-        if (!group || !Array.isArray(group.items)) {
-          return { placeholders, usage };
+      function getSelectedRowIndexes() {
+        const checks = Array.from(document.querySelectorAll(".row-check"));
+        return checks
+          .map((check, index) => (check.checked ? index : -1))
+          .filter((index) => index >= 0);
+      }
+
+      function getSelectedRows() {
+        return getSelectedRowIndexes().map((index) => currentRows[index]).filter(Boolean);
+      }
+
+      function updatePdfCountSummary() {
+        if (!pdfCountSummary) return;
+        const templateCount = selectedTemplateIds.length;
+        const selectedRows = getSelectedRows();
+        if (!templateCount || !currentRows.length || !selectedRows.length) {
+          pdfCountSummary.textContent = "Aun no hay suficientes datos para calcular cuantos PDFs se generaran.";
+          return;
         }
-        group.items.forEach((item) => {
-          const template = item.template || {};
-          const list = Array.isArray(template.placeholders) ? template.placeholders : [];
-          list.forEach((ph) => {
-            if (!usage[ph]) usage[ph] = [];
-            if (template.name && !usage[ph].includes(template.name)) usage[ph].push(template.name);
-            if (!placeholders.includes(ph)) placeholders.push(ph);
+        const pdfCount = selectedRows.length * templateCount;
+        pdfCountSummary.textContent = `Se generaran ${pdfCount} PDF(s): ${selectedRows.length} registro(s) seleccionados x ${templateCount} plantilla(s).`;
+      }
+
+      function updateBatchStatusPanel(message) {
+        if (!batchStatusPanel) return;
+        batchStatusPanel.textContent = message;
+      }
+
+      function computeRowValidation() {
+        const headerSet = new Set(currentHeaders.map((header) => String(header || "").trim()));
+        const missingColumns = currentPlaceholders.filter((placeholder) => !headerSet.has(placeholder));
+        const selectedTemplates = templates.filter((tpl) => selectedTemplateIds.includes(tpl.id));
+        const missingValues = [];
+        const selectedIndexes = getSelectedRowIndexes();
+
+        selectedIndexes.forEach((index) => {
+          const row = currentRows[index];
+          selectedTemplates.forEach((template) => {
+            const placeholders = Array.isArray(template.placeholders) ? template.placeholders : [];
+            const emptyFields = placeholders.filter((placeholder) => {
+              const value = row?.[placeholder];
+              return value === undefined || value === null || String(value).trim() === "";
+            });
+            if (emptyFields.length) {
+              missingValues.push({
+                rowIndex: index,
+                templateName: templateDisplayName(template),
+                fields: emptyFields,
+              });
+            }
           });
         });
-        return { placeholders, usage };
+
+        currentRowValidation = { missingColumns, missingValues };
+        return currentRowValidation;
       }
 
-      function setSelectedGroup(id) {
-        selectedGroupId = id || "";
-        const selected = groups.find((g) => g.id === selectedGroupId);
-        if (selected) {
-          groupNameInput.value = selected.name || "";
-          if (activeGroupChip) activeGroupChip.textContent = `Grupo seleccionado: ${selected.name}`;
-          const info = getGroupPlaceholderInfo(selected);
-          currentPlaceholders = info.placeholders;
-          placeholderUsage = info.usage;
-          if (placeholderList) {
-            placeholderList.innerHTML = currentPlaceholders.length
-              ? currentPlaceholders.map((p) => `<li>{{${p}}}</li>`).join("")
-              : "<li>No hay placeholders en el grupo.</li>";
+      function renderDataValidation() {
+        if (!dataValidationGrid) return;
+        if (!currentHeaders.length) {
+          dataValidationGrid.innerHTML = '<div class="text-sm text-slate-500">Carga un Excel para validar filas con datos faltantes.</div>';
+          return;
+        }
+        if (!selectedTemplateIds.length) {
+          dataValidationGrid.innerHTML = '<div class="text-sm text-slate-500">Selecciona una o varias plantillas para validar datos por fila.</div>';
+          return;
+        }
+        const validation = computeRowValidation();
+        if (validation.missingColumns.length) {
+          dataValidationGrid.innerHTML = `<div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">Primero corrige las columnas faltantes: ${validation.missingColumns.join(", ")}</div>`;
+          return;
+        }
+        if (!validation.missingValues.length) {
+          dataValidationGrid.innerHTML = '<div class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">No se detectaron datos faltantes por plantilla en las filas cargadas.</div>';
+          return;
+        }
+        const items = validation.missingValues.slice(0, 18).map((issue) => `
+          <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm">
+            <div class="font-semibold text-red-800">Fila ${issue.rowIndex + 1} - ${issue.templateName}</div>
+            <div class="mt-1 text-xs text-red-700">Faltan: ${issue.fields.join(", ")}</div>
+          </div>
+        `);
+        const more = validation.missingValues.length > 18
+          ? `<div class="text-xs text-slate-500">Se muestran 18 incidencias de ${validation.missingValues.length} encontradas.</div>`
+          : "";
+        dataValidationGrid.innerHTML = `${items.join("")}${more}`;
+      }
+
+      async function pollBatchStatus() {
+        if (!lastBatchId) return;
+        const endpoint = lastBatchMode === "multi" ? `/v1/batch-groups/${lastBatchId}` : `/v1/batches/${lastBatchId}`;
+        try {
+          const res = await fetch(`${apiBase}${endpoint}`);
+          const data = await res.json();
+          if (!res.ok || !data.batch) return;
+          lastBatchStatus = data.batch.status || "";
+          if (lastBatchStatus === "READY") {
+            updateBatchStatusPanel("Todos los PDFs fueron generados. Ya puedes abrir la pestaña de archivos.");
+            if (batchStatusPollTimer) {
+              window.clearInterval(batchStatusPollTimer);
+              batchStatusPollTimer = null;
+            }
+          } else if (lastBatchStatus === "PROCESSING" || lastBatchStatus === "PENDING") {
+            updateBatchStatusPanel(`Estado del lote: ${lastBatchStatus}. Esperando a que se generen todos los PDFs.`);
+          } else {
+            updateBatchStatusPanel(`Estado del lote: ${lastBatchStatus}. Revisa logs o vuelve a intentar.`);
+            if (batchStatusPollTimer) {
+              window.clearInterval(batchStatusPollTimer);
+              batchStatusPollTimer = null;
+            }
           }
-          const templateIds = new Set((selected.items || []).map((item) => item.templateId));
-          document.querySelectorAll(".group-template-check").forEach((check) => {
-            check.checked = templateIds.has(check.dataset.templateId);
-          });
-          document.querySelectorAll(".group-template-order").forEach((select) => {
-            const templateId = select.dataset.templateId;
-            const item = (selected.items || []).find((i) => i.templateId === templateId);
-            if (item) select.value = String(item.order ?? 0);
+          updateTabStates();
+        } catch (error) {
+          updateBatchStatusPanel("No se pudo consultar el estado del lote.");
+        }
+      }
+
+      function setSelectedTemplates(ids) {
+        const uniqueIds = Array.from(new Set((ids || []).filter(Boolean)));
+        if (uniqueIds.length > 4) {
+          batchMessage.textContent = "Puedes procesar hasta 4 plantillas por lote.";
+        }
+        selectedTemplateIds = uniqueIds.slice(0, 4);
+        const selectedTemplates = templates.filter((tpl) => selectedTemplateIds.includes(tpl.id));
+        if (selectedTemplates.length) {
+          currentPlaceholders = Array.from(
+            new Set(
+              selectedTemplates.flatMap((tpl) => (Array.isArray(tpl.placeholders) ? tpl.placeholders : []))
+            )
+          );
+          placeholderUsage = {};
+          currentPlaceholders.forEach((placeholder) => {
+            const usedBy = selectedTemplates
+              .filter((tpl) => Array.isArray(tpl.placeholders) && tpl.placeholders.includes(placeholder))
+              .map((tpl) => templateDisplayName(tpl));
+            if (usedBy.length) {
+              placeholderUsage[placeholder] = usedBy;
+            }
           });
         } else {
           currentPlaceholders = [];
           placeholderUsage = {};
-          if (placeholderList) {
-            placeholderList.innerHTML = "<li>No hay grupo seleccionado.</li>";
-          }
-          if (activeGroupChip) activeGroupChip.textContent = "Grupo seleccionado: Ninguno";
         }
+        if (placeholderList) {
+          placeholderList.innerHTML = currentPlaceholders.length
+            ? currentPlaceholders.map((p) => `<li>{{${p}}}</li>`).join("")
+            : "<li>Selecciona plantillas para ver placeholders.</li>";
+        }
+        Array.from(templateSelect.options).forEach((option) => {
+          option.selected = selectedTemplateIds.includes(option.value);
+        });
+        updateSelectionSummary();
         renderMapping();
+        renderDataValidation();
+        updatePdfCountSummary();
         updateTabStates();
+      }
+
+      function toggleTemplateSelection(id) {
+        if (!id) return;
+        const next = selectedTemplateIds.includes(id)
+          ? selectedTemplateIds.filter((item) => item !== id)
+          : [...selectedTemplateIds, id];
+        setSelectedTemplates(next);
+        renderTemplates();
       }
 
       function showTabMessage(message) {
@@ -531,12 +844,11 @@
       }
 
       function updateTabStates() {
-        const hasTemplateOrGroup = useGroupMode ? !!selectedGroupId : !!selectedTemplateId;
         const hasExcel = currentRows.length > 0;
-        const hasBatch = !!lastBatchId;
+        const hasBatch = !!lastBatchId && lastBatchStatus === "READY";
         const states = {
           plantillas: true,
-          excel: hasTemplateOrGroup,
+          excel: selectedTemplateIds.length > 0,
           preview: hasExcel,
           files: hasBatch,
         };
@@ -576,10 +888,10 @@
           if (!states[tab]) {
             const message =
               tab === "excel"
-                ? "Selecciona una plantilla o grupo para continuar."
+                ? "Selecciona una o varias plantillas para continuar."
                 : tab === "preview"
                 ? "Carga un Excel para habilitar el preview."
-                : "Procesa un lote para ver archivos.";
+                : "Los archivos se habilitan cuando todos los PDFs del lote esten listos.";
             showTabMessage(message);
             return;
           }
@@ -588,27 +900,11 @@
         });
       });
 
-      function setMode(mode) {
-        useGroupMode = mode === "group";
-        if (useGroupMode) {
-          modeGroupBtn.classList.add("bg-slate-900", "text-white", "shadow-sm");
-          modeGroupBtn.classList.remove("text-slate-600");
-          modeTemplateBtn.classList.remove("bg-slate-900", "text-white", "shadow-sm");
-          modeTemplateBtn.classList.add("text-slate-600");
-          templateSelect.disabled = true;
-          groupSelect.disabled = false;
-          if (downloadExcelBtn) downloadExcelBtn.textContent = "Descargar Excel de grupo";
-          setSelectedGroup(selectedGroupId);
-        } else {
-          modeTemplateBtn.classList.add("bg-slate-900", "text-white", "shadow-sm");
-          modeTemplateBtn.classList.remove("text-slate-600");
-          modeGroupBtn.classList.remove("bg-slate-900", "text-white", "shadow-sm");
-          modeGroupBtn.classList.add("text-slate-600");
-          templateSelect.disabled = false;
-          groupSelect.disabled = true;
-          if (downloadExcelBtn) downloadExcelBtn.textContent = "Descargar Excel de plantilla";
-          setSelectedTemplate(selectedTemplateId);
-        }
+      function setMode() {
+        if (activeGroupChip) activeGroupChip.textContent = "Flujo activo: Lote multi-plantilla";
+        templateSelect.disabled = false;
+        if (downloadExcelBtn) downloadExcelBtn.textContent = "Descargar Excel de carga";
+        setSelectedTemplates(selectedTemplateIds);
         updateTabStates();
       }
 
@@ -632,24 +928,48 @@
       function renderTemplates() {
         if (!templates.length) {
           templateList.innerHTML = "<li>No hay plantillas cargadas.</li>";
-          templateSelect.innerHTML = "<option value=\"\">Selecciona una plantilla...</option>";
-          groupTemplateList.innerHTML = "<p class=\"text-xs text-slate-500\">Carga plantillas para poder crear grupos.</p>";
+          templateSelect.innerHTML = "";
+          updateSelectionSummary();
           return;
         }
         templateList.innerHTML = templates
           .map((tpl) => {
-            const isSelected = tpl.id === selectedTemplateId;
+            const isSelected = selectedTemplateIds.includes(tpl.id);
             return `
               <li class="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm ${
                 isSelected ? "border-primary bg-primary/5" : "border-slate-200 bg-white"
               }">
-                <div class="flex items-center gap-2">
+                <label class="flex items-center gap-3">
+                  <input class="template-check h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" data-id="${tpl.id}" type="checkbox" ${
+                    isSelected ? "checked" : ""
+                  } />
                   <span class="material-symbols-outlined text-[18px] text-primary">description</span>
                   <span class="font-semibold">${templateDisplayName(tpl)}</span>
+                </label>
+                <div class="flex flex-wrap items-center gap-2 text-xs">
+                  <span class="rounded-full ${isSelected ? "bg-primary text-white" : "bg-slate-100 text-slate-600"} px-3 py-1 font-semibold">
+                    ${isSelected ? "Incluida" : "No incluida"}
+                  </span>
                 </div>
                 <div class="flex flex-wrap items-center gap-2 text-xs">
-                  <button class="select-template rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white" data-id="${tpl.id}">
-                    Seleccionar
+                  ${
+                    tpl.templateExt === ".html" || tpl.templateExt === ".htm"
+                      ? `<button
+                          class="preview-template-pdf rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-white"
+                          data-id="${tpl.id}"
+                          data-name="${templateDisplayName(tpl)}"
+                        >
+                          Ver PDF
+                        </button>`
+                      : ""
+                  }
+                  <button
+                    class="view-template rounded-lg border border-primary/30 px-3 py-1 text-xs font-semibold text-primary"
+                    data-url="${tpl.templateUrl || ""}"
+                    data-name="${templateDisplayName(tpl)}"
+                    data-kind="${tpl.templateExt || ""}"
+                  >
+                    Ver plantilla
                   </button>
                   <button class="deactivate-template rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600" data-id="${tpl.id}">
                     Desactivar
@@ -662,22 +982,40 @@
             `;
           })
           .join("");
-        templateSelect.innerHTML = [
-          '<option value="">Selecciona una plantilla...</option>',
-          ...templates.map((tpl) => `<option value="${tpl.id}">${tpl.name}</option>`),
-        ].join("");
-        if (!selectedTemplateId && templates[0]) {
-          templateSelect.value = templates[0].id;
-          setSelectedTemplate(templates[0].id);
+        templateSelect.innerHTML = templates
+          .map((tpl) => {
+            const selected = selectedTemplateIds.includes(tpl.id) ? " selected" : "";
+            return `<option value="${tpl.id}"${selected}>${templateDisplayName(tpl)}</option>`;
+          })
+          .join("");
+        if (!selectedTemplateIds.length && templates[0]) {
+          setSelectedTemplates([templates[0].id]);
         }
-        renderGroupTemplateOptions();
-        templateList.querySelectorAll(".select-template").forEach((btn) => {
+        templateList.querySelectorAll(".template-check").forEach((input) => {
+          input.addEventListener("change", () => {
+            const id = input.dataset.id;
+            if (!id) return;
+            toggleTemplateSelection(id);
+          });
+        });
+        templateList.querySelectorAll(".view-template").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const templateUrl = btn.dataset.url;
+            const title = btn.dataset.name || "Plantilla";
+            const kind = btn.dataset.kind || "";
+            if (!templateUrl) return;
+            openDocumentModal(templateUrl, title, kind);
+          });
+        });
+        templateList.querySelectorAll(".preview-template-pdf").forEach((btn) => {
           btn.addEventListener("click", () => {
             const id = btn.dataset.id;
+            const title = btn.dataset.name || "Plantilla";
             if (!id) return;
-            setMode("template");
-            templateSelect.value = id;
-            setSelectedTemplate(id);
+            const previewUrl = `/v1/templates/${id}/preview.pdf?organizationId=${encodeURIComponent(
+              storedOrgId || ""
+            )}&role=${encodeURIComponent(storedRole || "ADMIN")}`;
+            openDocumentModal(previewUrl, `${title} (PDF)`, ".pdf");
           });
         });
         templateList.querySelectorAll(".delete-template").forEach((btn) => {
@@ -698,130 +1036,11 @@
                 return;
               }
               templates = templates.filter((t) => t.id !== id);
-              if (selectedTemplateId === id) {
-                selectedTemplateId = "";
-              }
+              selectedTemplateIds = selectedTemplateIds.filter((item) => item !== id);
               renderTemplates();
+              setSelectedTemplates(selectedTemplateIds);
             } catch (error) {
               batchMessage.textContent = "Error de red al eliminar plantilla.";
-            }
-          });
-        });
-      }
-
-      function renderGroupTemplateOptions() {
-        if (!templates.length) {
-          groupTemplateList.innerHTML = "<p class=\"text-xs text-slate-500\">Carga plantillas para poder crear grupos.</p>";
-          return;
-        }
-        const options = [1, 2, 3, 4]
-          .map((value) => `<option value=\"${value}\">${value}</option>`)
-          .join("");
-        groupTemplateList.innerHTML = templates
-          .map(
-            (tpl, index) => `
-              <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
-                <label class="flex items-center gap-2 text-sm">
-                  <input class="group-template-check" data-template-id="${tpl.id}" type="checkbox" />
-                  <span class="font-medium">${templateDisplayName(tpl)}</span>
-                </label>
-                <label class="flex items-center gap-2 text-xs text-slate-500">
-                  Orden
-                  <select class="group-template-order rounded-lg border border-slate-200 px-2 py-1 text-xs" data-template-id="${tpl.id}">
-                    ${options}
-                  </select>
-                </label>
-              </div>
-            `
-          )
-          .join("");
-      }
-
-      function renderGroups() {
-        if (!groups.length) {
-          groupList.innerHTML = "<li>No hay grupos creados.</li>";
-          groupSelect.innerHTML = "<option value=\"\">Selecciona un grupo...</option>";
-          if (activeGroupChip) activeGroupChip.textContent = "Grupo seleccionado: Ninguno";
-          return;
-        }
-        groupList.innerHTML = groups
-          .map((group) => {
-            const names = (group.items || [])
-              .map((item) => item.template?.name || "Plantilla")
-              .join(", ");
-            const isSelected = group.id === selectedGroupId;
-            return `
-              <li class="group-row rounded-xl border px-3 py-3 text-sm ${
-                isSelected ? "border-primary bg-primary/5" : "border-slate-200 bg-white hover:bg-slate-50"
-              }" data-id="${group.id}">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p class="font-semibold text-slate-900">${group.name}</p>
-                    <p class="mt-1 text-xs text-slate-500">${names || "Sin plantillas asignadas."}</p>
-                  </div>
-                  <div class="flex flex-wrap items-center gap-2">
-                    <button class="select-group rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white" data-id="${group.id}">
-                      Seleccionar
-                    </button>
-                    <button class="delete-group rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600" data-id="${group.id}">
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-              </li>
-            `;
-          })
-          .join("");
-        groupSelect.innerHTML = [
-          '<option value="">Selecciona un grupo...</option>',
-          ...groups.map((group) => `<option value="${group.id}">${group.name}</option>`),
-        ].join("");
-        if (!selectedGroupId && groups[0]) {
-          groupSelect.value = groups[0].id;
-          setSelectedGroup(groups[0].id);
-        }
-        groupList.querySelectorAll(".select-group").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            const id = btn.dataset.id;
-            if (!id) return;
-            setMode("group");
-            groupSelect.value = id;
-            setSelectedGroup(id);
-          });
-        });
-        groupList.querySelectorAll(".group-row").forEach((row) => {
-          row.addEventListener("click", (event) => {
-            if (event.target.closest(".delete-group") || event.target.closest(".select-group")) return;
-            const id = row.dataset.id;
-            if (!id) return;
-            setMode("group");
-            groupSelect.value = id;
-            setSelectedGroup(id);
-          });
-        });
-        groupList.querySelectorAll(".delete-group").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const id = btn.dataset.id;
-            if (!id) return;
-            const confirmed = window.confirm("Eliminar grupo? No borra las plantillas.");
-            if (!confirmed) return;
-            try {
-              const res = await fetch(`${apiBase}/v1/template-groups/${id}`, {
-                method: "DELETE",
-                headers: { "content-type": "application/json" },
-              });
-              const data = await res.json().catch(() => ({}));
-              if (!res.ok) {
-                groupMessage.textContent = data.error || "No se pudo eliminar el grupo.";
-                return;
-              }
-              groups = groups.filter((g) => g.id !== id);
-              if (selectedGroupId === id) {
-                selectedGroupId = "";
-              }
-              renderGroups();
-            } catch (error) {
-              groupMessage.textContent = "Error de red al eliminar el grupo.";
             }
           });
         });
@@ -843,42 +1062,31 @@
                 return;
               }
               templates = templates.filter((t) => t.id !== id);
-              if (selectedTemplateId === id) {
-                selectedTemplateId = "";
-              }
+              selectedTemplateIds = selectedTemplateIds.filter((item) => item !== id);
               renderTemplates();
+              setSelectedTemplates(selectedTemplateIds);
             } catch (error) {
               batchMessage.textContent = "Error de red al desactivar plantilla.";
             }
           });
         });
+        updateSelectionSummary();
       }
 
       async function loadTemplates() {
         if (!storedOrgId) return;
         try {
+          const previousSelection = [...selectedTemplateIds];
           const res = await fetch(
             `${apiBase}/v1/templates?organizationId=${storedOrgId}&role=${encodeURIComponent(storedRole || "ADMIN")}`
           );
           const data = await res.json();
           templates = Array.isArray(data.items) ? data.items : [];
           renderTemplates();
+          const nextSelection = previousSelection.filter((id) => templates.some((tpl) => tpl.id === id));
+          setSelectedTemplates(nextSelection.length ? nextSelection : templates[0] ? [templates[0].id] : []);
         } catch (error) {
           templateList.innerHTML = "<li>No se pudo cargar la lista.</li>";
-        }
-      }
-
-      async function loadGroups() {
-        if (!storedOrgId) return;
-        try {
-          const res = await fetch(
-            `${apiBase}/v1/template-groups?organizationId=${storedOrgId}&role=${encodeURIComponent(storedRole || "ADMIN")}`
-          );
-          const data = await res.json();
-          groups = Array.isArray(data.items) ? data.items : [];
-          renderGroups();
-        } catch (error) {
-          groupList.innerHTML = "<li>No se pudo cargar la lista.</li>";
         }
       }
 
@@ -912,18 +1120,10 @@
             const data = await res.json();
             if (res.ok && data.template) {
               templateName.textContent = `Plantilla subida: ${data.template.name}`;
-              const placeholders = data.template.placeholders || [];
-              currentPlaceholders = placeholders.length ? placeholders : currentPlaceholders;
-            if (placeholderList) {
-              placeholderList.innerHTML = placeholders.length
-                ? placeholders.map((p) => `<li>{{${p}}}</li>`).join("")
-                : "<li>No se detectaron placeholders.</li>";
-            }
               templates = [data.template, ...templates];
-              selectedTemplateId = data.template.id;
+              selectedTemplateIds = Array.from(new Set([data.template.id, ...selectedTemplateIds]));
               renderTemplates();
-              templateSelect.value = data.template.id;
-              setSelectedTemplate(data.template.id);
+              setSelectedTemplates(selectedTemplateIds);
               renderMapping();
               successCount += 1;
             } else if (data.error === "template_name_exists") {
@@ -944,112 +1144,11 @@
         }
       });
 
-      createGroupBtn.addEventListener("click", async () => {
-        groupMessage.textContent = "";
-        if (!storedOrgId) {
-          groupMessage.textContent = "No hay organizacion asociada al usuario.";
-          return;
-        }
-        const name = String(groupNameInput.value || "").trim();
-        if (!name) {
-          groupMessage.textContent = "Ingresa un nombre para el grupo.";
-          return;
-        }
-        const checks = Array.from(document.querySelectorAll(".group-template-check")).filter((c) => c.checked);
-        if (!checks.length) {
-          groupMessage.textContent = "Selecciona al menos una plantilla.";
-          return;
-        }
-        if (checks.length > 4) {
-          groupMessage.textContent = "El grupo admite maximo 4 plantillas.";
-          return;
-        }
-        const items = checks
-          .map((check) => {
-            const templateId = check.dataset.templateId;
-            const orderSelect = document.querySelector(`.group-template-order[data-template-id="${templateId}"]`);
-            const order = orderSelect ? Number(orderSelect.value) || 0 : 0;
-            return { templateId, order };
-          })
-          .sort((a, b) => a.order - b.order);
-
-        try {
-          const res = await fetch(`${apiBase}/v1/template-groups`, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              organizationId: storedOrgId,
-              role: storedRole || "ADMIN",
-              name,
-              items,
-            }),
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            groupMessage.textContent = data.error || "No se pudo crear el grupo.";
-            return;
-          }
-          groupMessage.textContent = "Grupo creado.";
-          groupNameInput.value = "";
-          await loadGroups();
-        } catch (error) {
-          groupMessage.textContent = "Error de red al crear el grupo.";
-        }
-      });
-
-      updateGroupBtn.addEventListener("click", async () => {
-        groupMessage.textContent = "";
-        if (!storedOrgId) {
-          groupMessage.textContent = "No hay organizacion asociada al usuario.";
-          return;
-        }
-        if (!selectedGroupId) {
-          groupMessage.textContent = "Selecciona un grupo para actualizar.";
-          return;
-        }
-        const checks = Array.from(document.querySelectorAll(".group-template-check")).filter((c) => c.checked);
-        if (!checks.length) {
-          groupMessage.textContent = "Selecciona al menos una plantilla.";
-          return;
-        }
-        if (checks.length > 4) {
-          groupMessage.textContent = "El grupo admite maximo 4 plantillas.";
-          return;
-        }
-        const items = checks
-          .map((check) => {
-            const templateId = check.dataset.templateId;
-            const orderSelect = document.querySelector(`.group-template-order[data-template-id="${templateId}"]`);
-            const order = orderSelect ? Number(orderSelect.value) || 0 : 0;
-            return { templateId, order };
-          })
-          .sort((a, b) => a.order - b.order);
-
-        try {
-          const res = await fetch(`${apiBase}/v1/template-groups/${selectedGroupId}`, {
-            method: "PATCH",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              role: storedRole || "ADMIN",
-              items,
-            }),
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            groupMessage.textContent = data.error || "No se pudo actualizar el grupo.";
-            return;
-          }
-          groupMessage.textContent = "Grupo actualizado.";
-          await loadGroups();
-        } catch (error) {
-          groupMessage.textContent = "Error de red al actualizar el grupo.";
-        }
-      });
-
       function updateSelectedCount() {
         const checks = Array.from(document.querySelectorAll(".row-check"));
         const selected = checks.filter((c) => c.checked).length;
         selectedCount.textContent = `${selected} seleccionados`;
+        updatePdfCountSummary();
       }
 
       function setAllSelections(value) {
@@ -1061,38 +1160,43 @@
 
       selectAllBtn.addEventListener("click", () => setAllSelections(true));
       selectNoneBtn.addEventListener("click", () => setAllSelections(false));
-      templateSelect.addEventListener("change", (event) => {
-        setSelectedTemplate(event.target.value);
+      templateSelect.addEventListener("change", () => {
+        const selectedIds = Array.from(templateSelect.selectedOptions).map((option) => option.value);
+        setSelectedTemplates(selectedIds);
         renderTemplates();
       });
-      groupSelect.addEventListener("change", (event) => {
-        setMode("group");
-        setSelectedGroup(event.target.value);
-        renderGroups();
-      });
-      modeTemplateBtn.addEventListener("click", () => setMode("template"));
-      modeGroupBtn.addEventListener("click", () => setMode("group"));
       downloadExcelBtn.addEventListener("click", () => {
-        if (useGroupMode) {
-          if (!selectedGroupId) {
-            batchMessage.textContent = "Selecciona un grupo para descargar el Excel.";
-            return;
-          }
-          const url = `${apiBase}/v1/template-groups/${selectedGroupId}/excel?organizationId=${encodeURIComponent(
-            storedOrgId || ""
-          )}&role=${encodeURIComponent(storedRole || "ADMIN")}`;
-          window.location.href = url;
+        if (!selectedTemplateIds.length) {
+          batchMessage.textContent = "Selecciona al menos una plantilla para descargar el Excel.";
           return;
         }
-        if (!selectedTemplateId) {
-          batchMessage.textContent = "Selecciona una plantilla para descargar el Excel.";
-          return;
-        }
-        const url = `${apiBase}/v1/templates/${selectedTemplateId}/excel?organizationId=${encodeURIComponent(
-          storedOrgId || ""
-        )}&role=${encodeURIComponent(storedRole || "ADMIN")}`;
+        const url =
+          selectedTemplateIds.length === 1
+            ? `${apiBase}/v1/templates/${selectedTemplateIds[0]}/excel?organizationId=${encodeURIComponent(
+                storedOrgId || ""
+              )}&role=${encodeURIComponent(storedRole || "ADMIN")}`
+            : `${apiBase}/v1/templates/excel?organizationId=${encodeURIComponent(
+                storedOrgId || ""
+              )}&role=${encodeURIComponent(storedRole || "ADMIN")}&templateIds=${encodeURIComponent(
+                selectedTemplateIds.join(",")
+              )}`;
         window.location.href = url;
       });
+      if (downloadExampleExcelBtn) {
+        downloadExampleExcelBtn.addEventListener("click", () => {
+          window.location.href = `${apiBase}/v1/examples/excel-base`;
+        });
+      }
+      if (downloadExampleBaseBtn) {
+        downloadExampleBaseBtn.addEventListener("click", () => {
+          window.location.href = `${window.location.origin}/examples/base_html_impresion.html`;
+        });
+      }
+      if (downloadExampleMatriculaBtn) {
+        downloadExampleMatriculaBtn.addEventListener("click", () => {
+          window.location.href = `${window.location.origin}/examples/solicitud_matricula.html`;
+        });
+      }
 
       function guessRowLabel(row) {
         if (!row || typeof row !== "object") return "Registro";
@@ -1103,7 +1207,8 @@
           return "";
         };
         return (
-          pick(["persona1_nombre", "persona1_no", "nombre_estudiante", "representante"]) ||
+          pick(["AlumnoNombre", "estudiante_nombre", "nombre_estudiante"]) ||
+          pick(["PrimerNombre", "representante_nombre", "persona1_nombre", "persona1_no", "representante"]) ||
           pick(["persona2_nombre", "persona2_no"]) ||
           "Registro"
         );
@@ -1151,10 +1256,15 @@
           .join("");
       }
 
-      function openPdfModal(pdfUrl, title) {
+      function openDocumentModal(fileUrl, title, kind = "") {
         if (!pdfModal || !pdfModalFrame) return;
-        const fullUrl = `${apiBase}${pdfUrl}`;
-        pdfModalFrame.src = `${fullUrl}#toolbar=0&navpanes=0&scrollbar=1`;
+        const fullUrl = `${apiBase}${fileUrl}`;
+        if (kind === ".docx") {
+          window.open(fullUrl, "_blank", "noopener");
+          return;
+        }
+        pdfModalFrame.src =
+          kind === ".pdf" ? `${fullUrl}#toolbar=0&navpanes=0&scrollbar=1` : fullUrl;
         if (pdfModalTitle) pdfModalTitle.textContent = title || "Documento";
         pdfModal.classList.remove("hidden");
         pdfModal.classList.add("flex");
@@ -1185,7 +1295,7 @@
         const pdfUrl = link.dataset.viewPdf;
         const title = link.dataset.pdfTitle || "Documento";
         if (!pdfUrl) return;
-        openPdfModal(pdfUrl, title);
+        openDocumentModal(pdfUrl, title, ".pdf");
       });
 
       loadFilesBtn.addEventListener("click", async () => {
@@ -1194,8 +1304,12 @@
           filesMessage.textContent = "Aun no hay lote procesado en esta sesion.";
           return;
         }
+        if (lastBatchStatus !== "READY") {
+          filesMessage.textContent = "Espera a que el lote termine de generar todos los PDFs.";
+          return;
+        }
         const endpoint =
-          lastBatchMode === "group"
+          lastBatchMode === "multi"
             ? `/v1/batch-groups/${lastBatchId}/requests-detail`
             : `/v1/batches/${lastBatchId}/requests-detail`;
         try {
@@ -1211,66 +1325,30 @@
         }
       });
 
-      function autoMapPlaceholders() {
-        document.querySelectorAll("#mapping-grid select").forEach((select) => {
-          const placeholder = select.dataset.placeholder;
-          if (!placeholder) return;
-          const normalizedHeaders = currentHeaders.map((h) => h.trim());
-          const headerLower = normalizedHeaders.map((h) => h.toLowerCase());
-          const placeholderLower = placeholder.toLowerCase();
-          const exactIndex = headerLower.indexOf(placeholderLower);
-          if (exactIndex >= 0) {
-            select.value = normalizedHeaders[exactIndex];
-            return;
-          }
-          const aliasMap = {
-            nombre: ["nombre", "no"],
-            apellido: ["apellido", "ap"],
-            cedula: ["cedula", "ce"],
-            email: ["email", "em", "correo"],
-            celular: ["celular", "cel", "telefono", "tel"],
-          };
-          const parts = placeholderLower.split("_");
-          if (parts.length >= 2) {
-            const prefix = parts[0];
-            const suffix = parts.slice(1).join("_");
-            const aliases = aliasMap[suffix] || [suffix];
-            for (const alias of aliases) {
-              const candidate = `${prefix}_${alias}`;
-              const idx = headerLower.indexOf(candidate);
-              if (idx >= 0) {
-                select.value = normalizedHeaders[idx];
-                return;
-              }
-            }
-          }
-        });
-      }
-
       function validatePlaceholders() {
-        if (useGroupMode && !selectedGroupId) {
-          if (activeGroupChip) activeGroupChip.textContent = "Grupo seleccionado: Ninguno";
+        if (!selectedTemplateIds.length) {
           processBatchBtn.disabled = true;
           processBatchBtn.classList.add("opacity-60", "cursor-not-allowed");
           return;
         }
-        if (!useGroupMode && !selectedTemplateId) {
+        if (!currentPlaceholders.length) {
           processBatchBtn.disabled = true;
           processBatchBtn.classList.add("opacity-60", "cursor-not-allowed");
           return;
         }
-        if (!currentPlaceholders.length) return;
-        const missing = [];
-        document.querySelectorAll("#mapping-grid select").forEach((select) => {
-          if (!select.value) {
-            missing.push(select.dataset.placeholder);
-            select.classList.add("border-red-300");
-          } else {
-            select.classList.remove("border-red-300");
-          }
-        });
-        if (missing.length) {
-          batchMessage.textContent = `Faltan columnas para: ${missing.join(", ")}`;
+        if (!getSelectedRows().length) {
+          batchMessage.textContent = "Selecciona al menos un registro del preview para generar PDFs.";
+          processBatchBtn.disabled = true;
+          processBatchBtn.classList.add("opacity-60", "cursor-not-allowed");
+          return;
+        }
+        const validation = computeRowValidation();
+        if (validation.missingColumns.length) {
+          batchMessage.textContent = `Faltan columnas para: ${validation.missingColumns.join(", ")}`;
+          processBatchBtn.disabled = true;
+          processBatchBtn.classList.add("opacity-60", "cursor-not-allowed");
+        } else if (validation.missingValues.length) {
+          batchMessage.textContent = `Hay ${validation.missingValues.length} incidencia(s) de datos faltantes en filas/plantillas. Corrigelas antes de generar PDFs.`;
           processBatchBtn.disabled = true;
           processBatchBtn.classList.add("opacity-60", "cursor-not-allowed");
         } else {
@@ -1282,35 +1360,38 @@
 
       function renderMapping() {
         if (!currentHeaders.length) {
-          mappingGrid.innerHTML = "<div class=\"text-sm text-slate-500\">Carga un Excel para mapear columnas.</div>";
+          mappingGrid.innerHTML = "<div class=\"text-sm text-slate-500\">Carga un Excel para validar columnas obligatorias.</div>";
           return;
         }
         if (!currentPlaceholders.length) {
-          mappingGrid.innerHTML = `<div class="text-sm text-slate-500">${
-            useGroupMode ? "Selecciona un grupo para mapear placeholders." : "Selecciona una plantilla para mapear placeholders."
-          }</div>`;
+          mappingGrid.innerHTML = '<div class="text-sm text-slate-500">Selecciona una o varias plantillas para validar placeholders.</div>';
           return;
         }
-        mappingGrid.innerHTML = currentPlaceholders
-          .map((ph) => {
-            const options = currentHeaders
-              .map((h) => `<option value=\"${h}\">${h}</option>`)
-              .join("");
-            const usedBy = placeholderUsage[ph] ? `<span class="text-xs text-slate-400">Usado en: ${placeholderUsage[ph].join(", ")}</span>` : "";
-            return `
-              <label class=\"flex flex-col gap-2 text-sm\">
-                <span class=\"text-slate-600\">{{${ph}}}</span>
-                ${usedBy}
-                <select class=\"rounded-lg border border-slate-200 px-3 py-2\" data-placeholder=\"${ph}\">
-                  <option value=\"\">Selecciona columna...</option>
-                  ${options}
-                </select>
-              </label>
-            `;
-          })
-          .join("");
-        autoMapPlaceholders();
+        const headerSet = new Set(currentHeaders.map((header) => String(header || "").trim()));
+        const missing = [];
+        const available = [];
+        currentPlaceholders.forEach((placeholder) => {
+          const usedBy = placeholderUsage[placeholder] || [];
+          const line = `
+            <div class="rounded-lg border px-3 py-2 text-sm ${
+              headerSet.has(placeholder) ? "border-emerald-200 bg-emerald-50/50" : "border-red-200 bg-red-50/60"
+            }">
+              <div class="font-semibold text-slate-700">{{${placeholder}}}</div>
+              <div class="mt-1 text-xs text-slate-500">${usedBy.length ? `Usado en: ${usedBy.join(", ")}` : "Sin referencia de plantilla."}</div>
+              <div class="mt-1 text-xs ${headerSet.has(placeholder) ? "text-emerald-700" : "text-red-700"}">
+                ${headerSet.has(placeholder) ? "Columna encontrada en el Excel." : "Columna faltante en el Excel."}
+              </div>
+            </div>
+          `;
+          if (headerSet.has(placeholder)) {
+            available.push(line);
+          } else {
+            missing.push(line);
+          }
+        });
+        mappingGrid.innerHTML = [...missing, ...available].join("");
         validatePlaceholders();
+        renderDataValidation();
       }
 
       function renderRows(rows) {
@@ -1341,6 +1422,13 @@
         if (!file) return;
         fileName.textContent = `Archivo seleccionado: ${file.name}`;
         batchLocked = false;
+        lastBatchId = "";
+        lastBatchStatus = "";
+        if (batchStatusPollTimer) {
+          window.clearInterval(batchStatusPollTimer);
+          batchStatusPollTimer = null;
+        }
+        updateBatchStatusPanel("El lote aun no se ha generado.");
         processBatchBtn.disabled = false;
         processBatchBtn.classList.remove("opacity-60", "cursor-not-allowed");
 
@@ -1359,6 +1447,7 @@
             });
             renderRows(rows);
             renderMapping();
+            renderDataValidation();
             validatePlaceholders();
             updateTabStates();
           };
@@ -1385,6 +1474,7 @@
             });
             renderRows(rows);
             renderMapping();
+            renderDataValidation();
             validatePlaceholders();
             updateTabStates();
           };
@@ -1398,8 +1488,8 @@
           batchMessage.textContent = "Ya hay un lote en proceso. Sube otro Excel para crear uno nuevo.";
           return;
         }
-        if (!storedOrgId || (!useGroupMode && !selectedTemplateId) || (useGroupMode && !selectedGroupId)) {
-          batchMessage.textContent = useGroupMode ? "Selecciona un grupo primero." : "Selecciona una plantilla primero.";
+        if (!storedOrgId || !selectedTemplateIds.length) {
+          batchMessage.textContent = "Selecciona al menos una plantilla primero.";
           return;
         }
         if (!currentRows.length) {
@@ -1407,43 +1497,33 @@
           return;
         }
 
-        const mapping = {};
-        const missing = [];
-        document.querySelectorAll("#mapping-grid select").forEach((select) => {
-          const placeholder = select.dataset.placeholder;
-          const column = select.value;
-          if (!column) missing.push(placeholder);
-          else mapping[placeholder] = column;
-        });
-        if (missing.length) {
-          batchMessage.textContent = `Faltan columnas para: ${missing.join(", ")}`;
+        const selectedRows = getSelectedRows();
+        if (!selectedRows.length) {
+          batchMessage.textContent = "Selecciona al menos un registro del preview.";
           return;
         }
-
-        const mappedRows = currentRows.map((row) => {
-          const mapped = {};
-          Object.entries(mapping).forEach(([ph, col]) => {
-            mapped[ph] = row[col] ?? "";
-          });
-          return mapped;
-        });
+        const validation = computeRowValidation();
+        if (validation.missingColumns.length) {
+          batchMessage.textContent = `Faltan columnas para: ${validation.missingColumns.join(", ")}`;
+          return;
+        }
+        if (validation.missingValues.length) {
+          batchMessage.textContent = `Hay ${validation.missingValues.length} incidencia(s) de datos faltantes en filas/plantillas.`;
+          return;
+        }
 
         processBatchBtn.disabled = true;
         processBatchBtn.classList.add("opacity-60", "cursor-not-allowed");
         try {
           batchMessage.textContent = "Procesando lote...";
-          const endpoint = useGroupMode ? "/v1/batch-groups/start" : "/v1/batches/start";
+          const endpoint = "/v1/batches/start";
           const payload = {
             organizationId: storedOrgId,
-            columns: Object.keys(mapping),
-            mapping,
-            rows: mappedRows,
+            columns: currentHeaders,
+            rows: selectedRows,
+            templateId: selectedTemplateIds[0],
+            templateIds: selectedTemplateIds,
           };
-          if (useGroupMode) {
-            payload.groupId = selectedGroupId;
-          } else {
-            payload.templateId = selectedTemplateId;
-          }
           const res = await fetch(`${apiBase}${endpoint}`, {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -1458,11 +1538,20 @@
           }
           const batchId = data.batchId || "";
           lastBatchId = batchId;
-          lastBatchMode = useGroupMode ? "group" : "template";
+          lastBatchMode = data.mode || (selectedTemplateIds.length > 1 ? "multi" : "single");
+          lastBatchStatus = "PENDING";
           batchLocked = true;
           processBatchBtn.disabled = true;
           processBatchBtn.classList.add("opacity-60", "cursor-not-allowed");
-          batchMessage.textContent = `Lote creado: ${batchId}. Se procesara internamente.`;
+          if (batchStatusPollTimer) {
+            window.clearInterval(batchStatusPollTimer);
+          }
+          batchStatusPollTimer = window.setInterval(pollBatchStatus, 3000);
+          pollBatchStatus();
+          batchMessage.textContent =
+            lastBatchMode === "multi"
+              ? `Lote multi-plantilla creado: ${batchId}. Se generaran ${selectedRows.length * selectedTemplateIds.length} PDF(s).`
+              : `Lote creado: ${batchId}. Se generaran ${selectedRows.length} PDF(s).`;
           updateTabStates();
         } catch (error) {
           batchMessage.textContent = "Error de red al crear el lote.";
@@ -1478,9 +1567,9 @@
         c.addEventListener("change", updateSelectedCount);
       });
       updateSelectedCount();
+      refreshAgnosticPrompt();
       loadTemplates();
-      loadGroups();
-      setMode("template");
+      setMode();
       setActiveTab("plantillas");
       updateTabStates();
     </script>

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Plantilla Base Impresion</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 16mm 14mm;
+    }
+
+    :root {
+      --ink: #0f172a;
+      --muted: #475569;
+      --border: #dbe3ef;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Arial", sans-serif;
+      color: var(--ink);
+      line-height: 1.42;
+      font-size: 13px;
+    }
+
+    .document {
+      max-width: 100%;
+      margin: 0 auto;
+      border: 1px solid var(--border);
+      padding: 18px 20px;
+      background: #fff;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      text-align: center;
+      font-size: 22px;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      margin: 0 0 18px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .line {
+      margin-bottom: 10px;
+      text-align: justify;
+    }
+
+    .box {
+      margin: 12px 0;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+    }
+
+    .section-title {
+      margin: 18px 0 8px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .signature-block {
+      margin-top: 28px;
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }
+
+    .signature {
+      width: 240px;
+      margin: 0 auto;
+      padding-top: 10px;
+      border-top: 1px solid var(--ink);
+      text-align: center;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="document">
+    <h1>{{TituloDocumento}}</h1>
+    <p class="subtitle">{{SubtituloDocumento}}</p>
+
+    <p class="line">
+      Yo, <strong>{{PrimerNombre}} {{SegunNombre}} {{PrimerApellido}} {{SegApellido}}</strong>, identificado con documento
+      <strong>{{Cedula}}</strong>, actuando como representante de
+      <strong>{{AlumnoNombre}} {{AlumnoApellido}}</strong>, presento el presente documento ante
+      <strong>{{Institucion}}</strong>.
+    </p>
+
+    <div class="box">
+      <div><strong>Fecha:</strong> {{Fecha}}</div>
+      <div><strong>Correo:</strong> {{Email}}</div>
+      <div><strong>Celular:</strong> {{Celular}}</div>
+      <div><strong>Direccion:</strong> {{Direccion}}</div>
+      <div><strong>Curso:</strong> {{Curso}}</div>
+    </div>
+
+    <p class="section-title">Clausula</p>
+    <p class="line">
+      Reemplaza este bloque con el contenido real del documento. Usa exactamente los mismos nombres de columna del Excel
+      como placeholders dentro de la plantilla. Evita margenes verticales grandes y no empujes la firma con espacios
+      vacios; deja que el flujo natural del HTML haga el corte de pagina.
+    </p>
+
+    <div class="signature-block">
+      <div class="signature">Firma del representante</div>
+    </div>
+  </div>
+</body>
+</html>
