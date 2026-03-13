@@ -31,7 +31,7 @@ Use this skill to repeat the working setup: local compose with web + api + worke
 - Debug overlay:
   - `http://localhost:5173/?debug=1`
   - `http://localhost:5173/superadmin/index.html?debug=1`
-  - `http://localhost:5173/admin/upload.html?debug=1`
+  - `http://localhost:5173/admin/history.html?debug=1`
 
 ## Prisma + Seed
 - The API container runs:
@@ -53,11 +53,42 @@ Use this skill to repeat the working setup: local compose with web + api + worke
 - Login is email+password only; RUC removed from UI.
 - Store `auth_email`, `auth_role`, and optional `auth_org_id` in localStorage.
 - Redirect by role:
-  - `ADMIN` → `/admin/upload.html`
+  - `ADMIN` → `/admin/history.html`
   - `SUPER_ADMIN` → `/superadmin/index.html`
 - API base for frontend:
   - Use `http://localhost:8080` when on localhost.
   - Otherwise use `window.location.origin`.
+
+## Current Product Split
+- Desktop app is the primary operational flow:
+  - select local HTML templates
+  - load Excel
+  - generate PDFs locally
+  - upload ready documents to the API
+- Web admin is now consultation-first:
+  - review imported desktop batches
+  - inspect document metadata
+  - preview/download PDFs
+- Keep `web/admin/upload.html` only as a transition page for legacy links; do not rebuild the old operational wizard there unless requested explicitly.
+
+## Desktop Batch Import Lessons
+- Normalize Windows paths before extracting `basename` on the API side; imported desktop manifests may contain backslashes in `pdf_path`.
+- Persist and reuse `rowJson` from imported documents to enrich the web UI without another transformation layer.
+- When import fails, return and surface actionable backend detail (`missing_pdf_file`, `no_ready_documents`, etc.).
+
+## Desktop-to-Web Access Pattern
+- If the desktop app needs to open the web without asking the user to log in again, use a short-lived signed token.
+- Current flow:
+  - desktop calls `POST /v1/auth/desktop-web-link`
+  - API validates credentials and optional batch ownership
+  - API returns a URL to `history.html` with `autoLoginToken` and optional `batchId`
+  - web consumes it via `POST /v1/auth/desktop-token/consume`
+- Never place raw credentials in the browser URL or rely on blindly shared localStorage state.
+
+## History UX Pattern
+- Default the admin history to the latest uploaded desktop batch.
+- Let the operator expand to all batches only when needed.
+- Show signer identity from row fields (`PrimerNombre`, `SegunNombre`, `PrimerApellido`, `SegApellido`) in the selected batch detail and document search.
 
 ## Control Mode
 - Always execute OS-level commands directly when possible (docker, git, logs, health checks).
