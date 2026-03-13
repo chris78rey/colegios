@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Historial de Lotes | Firma Educativa</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#197fe6",
+              ink: "#0f172a",
+              mist: "#f6f7f8",
+            },
+            fontFamily: {
+              display: ["Manrope", "sans-serif"],
+            },
+            boxShadow: {
+              soft: "0 25px 60px -30px rgba(15, 23, 42, 0.25)",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      :root {
+        --ui-line: #94a3b8;
+        --ui-line-strong: #334155;
+        --ui-soft-text: #334155;
+        --ui-muted-text: #475569;
+        --ui-focus-ring: rgba(25, 127, 230, 0.28);
+      }
+
+      .border-slate-200 {
+        border-color: var(--ui-line) !important;
+      }
+
+      .text-slate-400 {
+        color: var(--ui-muted-text) !important;
+      }
+
+      .text-slate-500,
+      .text-slate-600 {
+        color: var(--ui-soft-text) !important;
+      }
+
+      .bg-slate-50 {
+        background-color: #f8fafc !important;
+      }
+
+      body {
+        background:
+          radial-gradient(1200px 600px at 10% -10%, rgba(25, 127, 230, 0.12), transparent 55%),
+          radial-gradient(900px 500px at 90% 0%, rgba(14, 165, 233, 0.1), transparent 60%),
+          #f6f7f8;
+      }
+
+      button,
+      input,
+      select,
+      iframe {
+        transition: box-shadow 120ms ease, border-color 120ms ease, background-color 120ms ease;
+      }
+
+      input:focus-visible,
+      select:focus-visible,
+      button:focus-visible {
+        outline: 3px solid var(--ui-line-strong);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px var(--ui-focus-ring);
+      }
+    </style>
+  </head>
+  <body class="bg-mist font-display text-ink">
+    <div class="min-h-screen">
+      <header class="border-b-2 border-slate-200 bg-white">
+        <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-primary">inventory_2</span>
+            <div>
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Admin Colegio</p>
+              <h1 class="text-lg font-bold">Historial de lotes</h1>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 text-sm text-slate-600">
+            <span id="user-email">admin@colegiocentral.edu</span>
+            <button class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold" id="logout">
+              Salir
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8">
+        <div class="rounded-2xl border-2 border-slate-200 bg-white p-3 shadow-soft">
+          <div class="flex flex-wrap items-center gap-2">
+            <a class="rounded-full border-2 border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700" href="/admin/upload.html">
+              Info del flujo
+            </a>
+            <a class="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white" href="/admin/history.html">
+              Historial de lotes
+            </a>
+            <a class="rounded-full border-2 border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700" href="/admin/signing.html">
+              Firma en lote
+            </a>
+            <a class="rounded-full border-2 border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700" href="/admin/cedulas-validacion.html">
+              Validacion de cedulas
+            </a>
+          </div>
+        </div>
+
+        <section class="rounded-2xl border-2 border-slate-200 bg-white p-6 shadow-soft">
+          <div class="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Bandeja documental</p>
+              <h2 class="mt-2 text-3xl font-extrabold text-slate-900">Lotes importados desde escritorio</h2>
+              <p class="mt-3 max-w-3xl text-sm text-slate-600">
+                Busca lotes por Excel, revisa documentos por fila y abre el PDF directamente desde esta pantalla.
+              </p>
+            </div>
+            <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm" id="load-batches" type="button">
+              Actualizar
+            </button>
+          </div>
+          <p class="mt-3 text-xs text-slate-500" id="history-message"></p>
+
+          <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Lotes visibles</p>
+              <div class="mt-3 text-3xl font-extrabold text-slate-900" id="stat-batches">0</div>
+              <p class="mt-2 text-xs text-slate-500">Segun los filtros actuales.</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">PDFs visibles</p>
+              <div class="mt-3 text-3xl font-extrabold text-slate-900" id="stat-pdfs">0</div>
+              <p class="mt-2 text-xs text-slate-500">Suma de documentos importados.</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Ultima importacion</p>
+              <div class="mt-3 text-sm font-bold text-slate-900" id="stat-last-date">Sin datos</div>
+              <p class="mt-2 text-xs text-slate-500" id="stat-last-file">Ningun Excel todavia.</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Lote seleccionado</p>
+              <div class="mt-3 text-sm font-bold text-slate-900" id="stat-selected-batch">Sin lote</div>
+              <p class="mt-2 text-xs text-slate-500" id="stat-selected-meta">Selecciona uno para ver detalle.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-soft">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Listado</p>
+              <h3 class="mt-2 text-lg font-bold text-slate-900">Historial numerico de lotes</h3>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <input
+                class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm"
+                id="batch-search"
+                placeholder="Buscar por Excel"
+                type="text"
+              />
+              <select class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm" id="status-filter">
+                <option value="ALL">Todos los estados</option>
+                <option value="IMPORTED">IMPORTED</option>
+                <option value="READY">READY</option>
+                <option value="ERROR">ERROR</option>
+              </select>
+              <select class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm" id="sort-filter">
+                <option value="desc">Mas recientes</option>
+                <option value="asc">Mas antiguos</option>
+                <option value="pdfs">Mas PDFs</option>
+              </select>
+              <label class="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700">
+                <input class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" id="latest-only" type="checkbox" checked />
+                <span>Solo ultimo lote</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <thead class="bg-slate-50">
+                  <tr class="text-left text-xs uppercase tracking-[0.18em] text-slate-400">
+                    <th class="px-4 py-3 font-semibold">N.</th>
+                    <th class="px-4 py-3 font-semibold">Excel</th>
+                    <th class="px-4 py-3 font-semibold">Fecha</th>
+                    <th class="px-4 py-3 font-semibold">PDFs</th>
+                    <th class="px-4 py-3 font-semibold">Filas</th>
+                    <th class="px-4 py-3 font-semibold">Estado</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 bg-white" id="batch-list">
+                  <tr>
+                    <td class="px-4 py-4 text-slate-500" colspan="6">Todavia no se han cargado lotes importados.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <p class="mt-3 text-xs text-slate-500">
+            Haz clic en el numero de lote o en cualquier fila para abrir el detalle.
+          </p>
+        </section>
+      </main>
+    </div>
+
+    <div class="fixed inset-0 z-40 hidden items-center justify-center bg-slate-900/55 p-4" id="batch-modal">
+      <div class="flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-soft">
+        <div class="flex items-center justify-between border-b-2 border-slate-200 px-4 py-3">
+          <div>
+            <p class="text-sm font-semibold text-slate-900" id="batch-title">Detalle del lote</p>
+            <p class="text-xs text-slate-500" id="batch-meta">Sin lote seleccionado</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button class="rounded-lg border-2 border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700" id="copy-batch-id" type="button">
+              Copiar ID
+            </button>
+            <a class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white" href="/admin/signing.html" id="go-to-signing">
+              Ir a firma
+            </a>
+            <button class="rounded-lg border-2 border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700" id="batch-modal-close" type="button">
+              Cerrar
+            </button>
+          </div>
+        </div>
+
+        <div class="grid flex-1 gap-4 overflow-hidden p-4 xl:grid-cols-[minmax(360px,0.9fr)_minmax(420px,1.1fr)]">
+          <section class="flex min-h-0 flex-col rounded-2xl border border-slate-200 bg-white p-4">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div class="grid gap-3 md:grid-cols-2">
+                <div>
+                  <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Excel</p>
+                  <p class="mt-2 text-sm font-semibold text-slate-900" id="detail-source-excel">Sin lote seleccionado</p>
+                </div>
+                <div>
+                  <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Fecha</p>
+                  <p class="mt-2 text-sm font-semibold text-slate-900" id="detail-created-at">Sin fecha</p>
+                </div>
+                <div>
+                  <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Documentos</p>
+                  <p class="mt-2 text-sm font-semibold text-slate-900" id="detail-document-count">0 PDF(s)</p>
+                </div>
+                <div>
+                  <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Filas</p>
+                  <p class="mt-2 text-sm font-semibold text-slate-900" id="detail-row-count">0 fila(s)</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between gap-3">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Documentos del lote</p>
+              <input
+                class="w-full max-w-[240px] rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm"
+                id="document-search"
+                placeholder="Buscar plantilla o archivo"
+                type="text"
+              />
+            </div>
+            <div class="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1" id="document-list">
+              <div class="text-sm text-slate-500">Selecciona un lote para ver sus PDFs.</div>
+            </div>
+          </section>
+
+          <section class="flex min-h-0 flex-col rounded-2xl border border-slate-200 bg-white p-4">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Vista previa</p>
+                <h3 class="mt-2 text-lg font-bold text-slate-900" id="preview-title">Selecciona un documento</h3>
+              </div>
+              <div class="flex items-center gap-2">
+                <a
+                  class="rounded-lg border-2 border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700"
+                  href="#"
+                  id="download-current-pdf"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Descargar PDF
+                </a>
+                <button class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white" id="open-preview-modal" type="button">
+                  Abrir grande
+                </button>
+              </div>
+            </div>
+            <p class="mt-2 text-xs text-slate-500" id="preview-meta">Elige un PDF del lote para ver su detalle.</p>
+            <div class="mt-4 min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+              <iframe class="h-full w-full" id="inline-preview-frame" title="Vista previa PDF"></iframe>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <div class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4" id="pdf-modal">
+      <div class="flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-soft">
+        <div class="flex items-center justify-between border-b-2 border-slate-200 px-4 py-3">
+          <div>
+            <p class="text-sm font-semibold text-slate-900">Vista previa PDF</p>
+            <p class="text-xs text-slate-500" id="pdf-modal-title">Documento</p>
+          </div>
+          <button class="rounded-lg border-2 border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600" id="pdf-modal-close">
+            Cerrar
+          </button>
+        </div>
+        <div class="flex-1 bg-slate-100">
+          <iframe class="h-full w-full" id="pdf-modal-frame" title="PDF Viewer"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function readStoredAuthValue(key) {
+        return window.localStorage.getItem(key) || window.sessionStorage.getItem(key) || "";
+      }
+
+      function clearStoredAuth() {
+        [window.localStorage, window.sessionStorage].forEach((storage) => {
+          storage.removeItem("auth_email");
+          storage.removeItem("auth_role");
+          storage.removeItem("auth_org_id");
+        });
+      }
+
+      function requireAuth(allowedRoles) {
+        const email = readStoredAuthValue("auth_email");
+        const role = readStoredAuthValue("auth_role");
+        const orgId = readStoredAuthValue("auth_org_id");
+        if (!email || !role) {
+          clearStoredAuth();
+          window.location.href = "/";
+          return null;
+        }
+        if (allowedRoles && !allowedRoles.includes(role)) {
+          clearStoredAuth();
+          window.location.href = "/";
+          return null;
+        }
+        return { email, role, orgId };
+      }
+      const params = new URLSearchParams(window.location.search);
+      const autoLoginToken = params.get("autoLoginToken") || "";
+      const requestedBatchId = params.get("batchId") || "";
+      const apiBase =
+        window.API_BASE_URL ||
+        (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+          ? "http://localhost:8080"
+          : window.location.origin);
+
+      const userEmail = document.getElementById("user-email");
+      const historyMessage = document.getElementById("history-message");
+      const batchCount = document.getElementById("batch-count");
+      const batchList = document.getElementById("batch-list");
+      const batchSearch = document.getElementById("batch-search");
+      const statusFilter = document.getElementById("status-filter");
+      const sortFilter = document.getElementById("sort-filter");
+      const latestOnly = document.getElementById("latest-only");
+      const batchTitle = document.getElementById("batch-title");
+      const batchMeta = document.getElementById("batch-meta");
+      const copyBatchIdBtn = document.getElementById("copy-batch-id");
+      const goToSigningLink = document.getElementById("go-to-signing");
+      const detailSourceExcel = document.getElementById("detail-source-excel");
+      const detailCreatedAt = document.getElementById("detail-created-at");
+      const detailDocumentCount = document.getElementById("detail-document-count");
+      const detailRowCount = document.getElementById("detail-row-count");
+      const documentSearch = document.getElementById("document-search");
+      const documentList = document.getElementById("document-list");
+      const previewTitle = document.getElementById("preview-title");
+      const previewMeta = document.getElementById("preview-meta");
+      const inlinePreviewFrame = document.getElementById("inline-preview-frame");
+      const downloadCurrentPdf = document.getElementById("download-current-pdf");
+      const openPreviewModalBtn = document.getElementById("open-preview-modal");
+      const loadBatchesBtn = document.getElementById("load-batches");
+      const statBatches = document.getElementById("stat-batches");
+      const statPdfs = document.getElementById("stat-pdfs");
+      const statLastDate = document.getElementById("stat-last-date");
+      const statLastFile = document.getElementById("stat-last-file");
+      const statSelectedBatch = document.getElementById("stat-selected-batch");
+      const statSelectedMeta = document.getElementById("stat-selected-meta");
+      const batchModal = document.getElementById("batch-modal");
+      const batchModalClose = document.getElementById("batch-modal-close");
+      const pdfModal = document.getElementById("pdf-modal");
+      const pdfModalFrame = document.getElementById("pdf-modal-frame");
+      const pdfModalTitle = document.getElementById("pdf-modal-title");
+      const pdfModalClose = document.getElementById("pdf-modal-close");
+      let storedEmail = "";
+      let storedOrgId = "";
+
+      let desktopBatches = [];
+      let filteredBatches = [];
+      let batchDocuments = [];
+      let filteredDocuments = [];
+      let activeDesktopBatchId = "";
+      let activeDocumentId = "";
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function formatDateTime(value) {
+        if (!value) return "Sin fecha";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+        return date.toLocaleString("es-CO", {
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      function processStatusBadge(status) {
+        const normalized = String(status || "").toUpperCase();
+        const styles = {
+          IMPORTED: "border-emerald-200 bg-emerald-50 text-emerald-700",
+          READY: "border-emerald-200 bg-emerald-50 text-emerald-700",
+          ERROR: "border-red-200 bg-red-50 text-red-700",
+        };
+        const className = styles[normalized] || "border-slate-200 bg-slate-50 text-slate-700";
+        return `<span class="inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold ${className}">${normalized || "SIN ESTADO"}</span>`;
+      }
+
+      function signerFullName(row) {
+        if (!row || typeof row !== "object") return "";
+        const parts = [
+          row.PrimerNombre,
+          row.SegunNombre,
+          row.PrimerApellido,
+          row.SegApellido,
+        ]
+          .map((value) => String(value || "").trim())
+          .filter(Boolean);
+        return parts.join(" ");
+      }
+
+      function openDocumentModal(fileUrl, title) {
+        const fullUrl = `${apiBase}${fileUrl}`;
+        pdfModalFrame.src = `${fullUrl}#toolbar=0&navpanes=0&scrollbar=1`;
+        pdfModalTitle.textContent = title || "Documento";
+        pdfModal.classList.remove("hidden");
+        pdfModal.classList.add("flex");
+      }
+
+      function closePdfModal() {
+        pdfModal.classList.add("hidden");
+        pdfModal.classList.remove("flex");
+        pdfModalFrame.src = "";
+      }
+
+      function applyBatchFilters() {
+        const searchValue = String(batchSearch.value || "").trim().toLowerCase();
+        const statusValue = String(statusFilter.value || "ALL").toUpperCase();
+        const sortValue = String(sortFilter.value || "desc");
+        const latestOnlyEnabled = !!latestOnly?.checked;
+
+        filteredBatches = [...desktopBatches].filter((item) => {
+          const matchesSearch = !searchValue || String(item.sourceExcel || "").toLowerCase().includes(searchValue);
+          const matchesStatus = statusValue === "ALL" || String(item.status || "").toUpperCase() === statusValue;
+          return matchesSearch && matchesStatus;
+        });
+
+        filteredBatches.sort((a, b) => {
+          if (sortValue === "asc") {
+            return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+          }
+          if (sortValue === "pdfs") {
+            return Number(b.documentCount || 0) - Number(a.documentCount || 0);
+          }
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        });
+
+        if (latestOnlyEnabled && filteredBatches.length > 1) {
+          filteredBatches = [filteredBatches[0]];
+        }
+
+        if (activeDesktopBatchId && !filteredBatches.some((item) => item.id === activeDesktopBatchId)) {
+          activeDesktopBatchId = filteredBatches[0]?.id || "";
+        }
+      }
+
+      function updateSummaryCards() {
+        const totalPdfs = filteredBatches.reduce((sum, item) => sum + Number(item.documentCount || 0), 0);
+        statBatches.textContent = String(filteredBatches.length);
+        statPdfs.textContent = String(totalPdfs);
+
+        const latestBatch = [...desktopBatches].sort(
+          (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+        )[0];
+        statLastDate.textContent = latestBatch ? formatDateTime(latestBatch.createdAt) : "Sin datos";
+        statLastFile.textContent = latestBatch ? latestBatch.sourceExcel || "excel_local.xlsx" : "Ningun Excel todavia.";
+
+        const activeBatch = desktopBatches.find((item) => item.id === activeDesktopBatchId);
+        statSelectedBatch.textContent = activeBatch ? activeBatch.id : "Sin lote";
+        statSelectedMeta.textContent = activeBatch
+          ? `${Number(activeBatch.documentCount || 0)} PDF(s) · ${activeBatch.sourceExcel || "excel_local.xlsx"}`
+          : "Selecciona uno para ver detalle.";
+      }
+
+      function openBatchModal() {
+        batchModal.classList.remove("hidden");
+        batchModal.classList.add("flex");
+      }
+
+      function closeBatchModal() {
+        batchModal.classList.add("hidden");
+        batchModal.classList.remove("flex");
+      }
+
+      function renderDesktopBatchItems() {
+        if (batchCount) batchCount.textContent = `${filteredBatches.length} lote(s)`;
+        if (!filteredBatches.length) {
+          batchList.innerHTML = "<tr><td class=\"px-4 py-4 text-slate-500\" colspan=\"6\">No hay lotes que coincidan con los filtros actuales.</td></tr>";
+          return;
+        }
+        batchList.innerHTML = filteredBatches
+          .map((item, index) => {
+            const isActive = item.id === activeDesktopBatchId;
+            return `
+              <tr
+                class="desktop-batch-item cursor-pointer ${isActive ? "bg-primary/5" : "bg-white hover:bg-slate-50"}"
+                data-batch-id="${escapeHtml(item.id)}"
+              >
+                <td class="px-4 py-4">
+                  <button class="rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white" data-batch-id="${escapeHtml(item.id)}" type="button">
+                    ${index + 1}
+                  </button>
+                </td>
+                <td class="px-4 py-4 font-semibold text-slate-900">${escapeHtml(item.sourceExcel || "excel_local.xlsx")}</td>
+                <td class="px-4 py-4 text-slate-600">${escapeHtml(formatDateTime(item.createdAt))}</td>
+                <td class="px-4 py-4 text-slate-700">${Number(item.documentCount || 0)}</td>
+                <td class="px-4 py-4 text-slate-700">${Number(item.rowCount || 0)}</td>
+                <td class="px-4 py-4">${processStatusBadge(item.status)}</td>
+              </tr>
+            `;
+          })
+          .join("");
+      }
+
+      function applyDocumentFilters() {
+        const searchValue = String(documentSearch.value || "").trim().toLowerCase();
+        filteredDocuments = batchDocuments.filter((item) => {
+          if (!searchValue) return true;
+          const signerName = signerFullName(item.row).toLowerCase();
+          return (
+            String(item.templateName || "").toLowerCase().includes(searchValue) ||
+            String(item.outputName || "").toLowerCase().includes(searchValue) ||
+            String(item.groupKey || "").toLowerCase().includes(searchValue) ||
+            signerName.includes(searchValue)
+          );
+        });
+        if (activeDocumentId && !filteredDocuments.some((item) => item.id === activeDocumentId)) {
+          activeDocumentId = filteredDocuments[0]?.id || "";
+        }
+      }
+
+      function renderDocumentDetails(batch) {
+        batchTitle.textContent = batch ? batch.sourceExcel || "Lote importado" : "Selecciona un lote";
+        batchMeta.textContent = batch
+          ? `${Number(batch.documentCount || 0)} PDF(s) · ${formatDateTime(batch.createdAt)}`
+          : "Sin lote seleccionado";
+        goToSigningLink.href = batch ? `/admin/signing.html?batchId=${encodeURIComponent(batch.id)}` : "/admin/signing.html";
+        detailSourceExcel.textContent = batch ? batch.sourceExcel || "excel_local.xlsx" : "Sin lote seleccionado";
+        detailCreatedAt.textContent = batch ? formatDateTime(batch.createdAt) : "Sin fecha";
+        detailDocumentCount.textContent = batch ? `${Number(batch.documentCount || 0)} PDF(s)` : "0 PDF(s)";
+        detailRowCount.textContent = batch ? `${Number(batch.rowCount || 0)} fila(s)` : "0 fila(s)";
+      }
+
+      function renderDocuments() {
+        if (!activeDesktopBatchId) {
+          documentList.innerHTML = "<div class=\"text-sm text-slate-500\">Selecciona un lote para ver sus PDFs.</div>";
+          return;
+        }
+        if (!filteredDocuments.length) {
+          documentList.innerHTML = "<div class=\"text-sm text-slate-500\">No hay documentos que coincidan con el filtro actual.</div>";
+          return;
+        }
+        documentList.innerHTML = filteredDocuments
+          .map((item) => {
+            const isActive = item.id === activeDocumentId;
+            const signerName = signerFullName(item.row) || "Firmador sin nombre";
+            return `
+              <button
+                class="document-item w-full rounded-2xl border px-4 py-4 text-left ${isActive ? "border-primary bg-primary/5" : "border-slate-200 bg-slate-50"}"
+                data-document-id="${escapeHtml(item.id)}"
+                type="button"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="truncate text-sm font-bold text-slate-900">${escapeHtml(item.templateName || "Plantilla")}</div>
+                    <div class="mt-1 text-xs font-semibold text-slate-700">${escapeHtml(signerName)}</div>
+                    <div class="mt-1 text-xs text-slate-500">Fila ${Number(item.rowIndex || 0) + 1} · Grupo ${escapeHtml(item.groupKey || "sin-grupo")}</div>
+                    <div class="mt-2 truncate text-xs text-slate-500">${escapeHtml(item.outputName || "")}</div>
+                  </div>
+                  ${processStatusBadge(item.status)}
+                </div>
+              </button>
+            `;
+          })
+          .join("");
+      }
+
+      function updatePreviewPanel() {
+        const activeDocument = batchDocuments.find((item) => item.id === activeDocumentId) || null;
+        if (!activeDocument || !activeDocument.pdfUrl) {
+          previewTitle.textContent = "Selecciona un documento";
+          previewMeta.textContent = "Elige un PDF para previsualizarlo aqui.";
+          inlinePreviewFrame.src = "";
+          downloadCurrentPdf.href = "#";
+          downloadCurrentPdf.setAttribute("aria-disabled", "true");
+          return;
+        }
+        const fullUrl = `${apiBase}${activeDocument.pdfUrl}`;
+        const signerName = signerFullName(activeDocument.row);
+        previewTitle.textContent = activeDocument.templateName || "Documento";
+        previewMeta.textContent = `${signerName ? `${signerName} · ` : ""}${activeDocument.outputName || ""} · Fila ${Number(activeDocument.rowIndex || 0) + 1}`;
+        inlinePreviewFrame.src = `${fullUrl}#toolbar=0&navpanes=0&scrollbar=1`;
+        downloadCurrentPdf.href = fullUrl;
+        downloadCurrentPdf.setAttribute("aria-disabled", "false");
+      }
+
+      async function loadDesktopBatchDocuments(batchId, silent = false) {
+        if (!batchId) return;
+        const batch = desktopBatches.find((item) => item.id === batchId) || null;
+        activeDesktopBatchId = batchId;
+        renderDesktopBatchItems();
+        renderDocumentDetails(batch);
+        if (!silent) openBatchModal();
+        if (!silent) historyMessage.textContent = "Cargando documentos del lote...";
+        try {
+          const res = await fetch(`${apiBase}/v1/desktop-batches/${batchId}/documents`);
+          const data = await res.json();
+          if (!res.ok) {
+            historyMessage.textContent = data.error || "No se pudieron cargar los documentos del lote.";
+            batchDocuments = [];
+            filteredDocuments = [];
+            activeDocumentId = "";
+            renderDocuments();
+            updatePreviewPanel();
+            return;
+          }
+          batchDocuments = Array.isArray(data.items) ? data.items : [];
+          applyDocumentFilters();
+          if (!activeDocumentId && filteredDocuments[0]) {
+            activeDocumentId = filteredDocuments[0].id;
+          }
+          renderDocuments();
+          updatePreviewPanel();
+          updateSummaryCards();
+          if (!silent) historyMessage.textContent = "Documentos cargados.";
+        } catch (error) {
+          historyMessage.textContent = "Error de red al cargar los documentos del lote.";
+          batchDocuments = [];
+          filteredDocuments = [];
+          activeDocumentId = "";
+          renderDocuments();
+          updatePreviewPanel();
+        }
+      }
+
+      async function loadDesktopBatches(silent = false) {
+        if (!storedOrgId) {
+          historyMessage.textContent = "No hay organizacion asociada al usuario.";
+          return;
+        }
+        try {
+          if (!silent) historyMessage.textContent = "Cargando lotes importados...";
+          const res = await fetch(`${apiBase}/v1/desktop-batches?organizationId=${encodeURIComponent(storedOrgId)}`);
+          const data = await res.json();
+          if (!res.ok) {
+            historyMessage.textContent = data.error || "No se pudieron cargar los lotes importados.";
+            return;
+          }
+          desktopBatches = Array.isArray(data.items) ? data.items : [];
+          if (requestedBatchId && desktopBatches.some((item) => item.id === requestedBatchId)) {
+            activeDesktopBatchId = requestedBatchId;
+          }
+          if (!activeDesktopBatchId && desktopBatches[0]) {
+            activeDesktopBatchId = desktopBatches[0].id;
+          }
+          applyBatchFilters();
+          updateSummaryCards();
+          renderDesktopBatchItems();
+          const batch = filteredBatches.find((item) => item.id === activeDesktopBatchId) || filteredBatches[0] || null;
+          activeDesktopBatchId = batch?.id || "";
+          if (activeDesktopBatchId) {
+            await loadDesktopBatchDocuments(activeDesktopBatchId, true);
+          } else {
+            renderDocumentDetails(null);
+            batchDocuments = [];
+            filteredDocuments = [];
+            activeDocumentId = "";
+            renderDocuments();
+            updatePreviewPanel();
+          }
+          if (!silent) {
+            historyMessage.textContent = filteredBatches.length
+              ? "Lotes importados actualizados."
+              : "No hay lotes importados todavia.";
+          }
+        } catch (error) {
+          historyMessage.textContent = "Error de red al cargar lotes importados.";
+        }
+      }
+
+      pdfModalClose.addEventListener("click", closePdfModal);
+      batchModalClose.addEventListener("click", closeBatchModal);
+      batchModal.addEventListener("click", (event) => {
+        if (event.target === batchModal) closeBatchModal();
+      });
+      pdfModal.addEventListener("click", (event) => {
+        if (event.target === pdfModal) closePdfModal();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closePdfModal();
+        if (event.key === "Escape") closeBatchModal();
+      });
+
+      batchSearch.addEventListener("input", () => {
+        applyBatchFilters();
+        updateSummaryCards();
+        renderDesktopBatchItems();
+      });
+
+      statusFilter.addEventListener("change", () => {
+        applyBatchFilters();
+        updateSummaryCards();
+        renderDesktopBatchItems();
+      });
+
+      sortFilter.addEventListener("change", () => {
+        applyBatchFilters();
+        renderDesktopBatchItems();
+      });
+
+      latestOnly.addEventListener("change", () => {
+        applyBatchFilters();
+        updateSummaryCards();
+        renderDesktopBatchItems();
+        const batch = filteredBatches.find((item) => item.id === activeDesktopBatchId) || filteredBatches[0] || null;
+        activeDesktopBatchId = batch?.id || "";
+        if (activeDesktopBatchId) {
+          loadDesktopBatchDocuments(activeDesktopBatchId, true);
+        } else {
+          renderDocumentDetails(null);
+          batchDocuments = [];
+          filteredDocuments = [];
+          activeDocumentId = "";
+          renderDocuments();
+          updatePreviewPanel();
+        }
+      });
+
+      documentSearch.addEventListener("input", () => {
+        applyDocumentFilters();
+        renderDocuments();
+        updatePreviewPanel();
+      });
+
+      batchList.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-batch-id]");
+        if (!button) return;
+        const batchId = button.dataset.batchId;
+        if (!batchId) return;
+        loadDesktopBatchDocuments(batchId);
+      });
+
+      documentList.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-document-id]");
+        if (!button) return;
+        activeDocumentId = button.dataset.documentId || "";
+        renderDocuments();
+        updatePreviewPanel();
+      });
+
+      copyBatchIdBtn.addEventListener("click", async () => {
+        if (!activeDesktopBatchId) return;
+        try {
+          await navigator.clipboard.writeText(activeDesktopBatchId);
+          historyMessage.textContent = `ID copiado: ${activeDesktopBatchId}`;
+        } catch (error) {
+          historyMessage.textContent = "No se pudo copiar el ID del lote.";
+        }
+      });
+
+      openPreviewModalBtn.addEventListener("click", () => {
+        const activeDocument = batchDocuments.find((item) => item.id === activeDocumentId);
+        if (!activeDocument?.pdfUrl) return;
+        openDocumentModal(activeDocument.pdfUrl, activeDocument.templateName || "Documento");
+      });
+
+      loadBatchesBtn.addEventListener("click", async () => {
+        historyMessage.textContent = "";
+        await loadDesktopBatches();
+      });
+
+      async function initPage() {
+        if (autoLoginToken) {
+          try {
+            const res = await fetch(`${apiBase}/v1/auth/desktop-token/consume`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ token: autoLoginToken }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+              clearStoredAuth();
+              window.location.href = "/";
+              return;
+            }
+            [window.localStorage, window.sessionStorage].forEach((storage) => {
+              storage.setItem("auth_email", data.user.email);
+              storage.setItem("auth_role", data.user.role);
+              if (data.user.organizationId) {
+                storage.setItem("auth_org_id", data.user.organizationId);
+              } else {
+                storage.removeItem("auth_org_id");
+              }
+            });
+            const cleanUrl = new URL(window.location.href);
+            cleanUrl.searchParams.delete("autoLoginToken");
+            window.history.replaceState({}, "", cleanUrl.toString());
+          } catch (error) {
+            clearStoredAuth();
+            window.location.href = "/";
+            return;
+          }
+        }
+
+        const auth = requireAuth(["ADMIN"]);
+        storedEmail = auth?.email || readStoredAuthValue("auth_email");
+        storedOrgId = auth?.orgId || readStoredAuthValue("auth_org_id");
+        if (storedEmail) userEmail.textContent = storedEmail;
+
+        document.getElementById("logout").addEventListener("click", () => {
+          clearStoredAuth();
+          window.location.href = "/";
+        });
+
+        await loadDesktopBatches(true);
+      }
+
+      initPage();
+    </script>
+  </body>
+</html>

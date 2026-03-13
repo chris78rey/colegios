@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Validacion de Cedulas | Firma Educativa</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#197fe6",
+              ink: "#0f172a",
+              mist: "#f6f7f8",
+            },
+            fontFamily: {
+              display: ["Manrope", "sans-serif"],
+            },
+            boxShadow: {
+              soft: "0 25px 60px -30px rgba(15, 23, 42, 0.25)",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      :root {
+        --ui-line: #94a3b8;
+        --ui-line-strong: #334155;
+        --ui-soft-text: #334155;
+        --ui-muted-text: #475569;
+        --ui-focus-ring: rgba(25, 127, 230, 0.28);
+      }
+
+      .border-slate-200 {
+        border-color: var(--ui-line) !important;
+      }
+
+      .text-slate-400 {
+        color: var(--ui-muted-text) !important;
+      }
+
+      .text-slate-500,
+      .text-slate-600,
+      .text-slate-700 {
+        color: var(--ui-soft-text) !important;
+      }
+
+      .bg-slate-50 {
+        background-color: #f8fafc !important;
+      }
+
+      body {
+        background:
+          radial-gradient(1200px 600px at 10% -10%, rgba(25, 127, 230, 0.12), transparent 55%),
+          radial-gradient(900px 500px at 90% 0%, rgba(14, 165, 233, 0.1), transparent 60%),
+          #f6f7f8;
+      }
+
+      button,
+      input,
+      select,
+      a {
+        transition: box-shadow 120ms ease, border-color 120ms ease, background-color 120ms ease;
+      }
+
+      input:focus-visible,
+      select:focus-visible,
+      button:focus-visible,
+      a:focus-visible {
+        outline: 3px solid var(--ui-line-strong);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px var(--ui-focus-ring);
+      }
+    </style>
+  </head>
+  <body class="bg-mist font-display text-ink">
+    <div class="min-h-screen">
+      <header class="border-b-2 border-slate-200 bg-white">
+        <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-primary">badge</span>
+            <div>
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Admin Colegio</p>
+              <h1 class="text-lg font-bold">Validacion de cedulas</h1>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 text-sm text-slate-600">
+            <span id="user-email">admin@colegiocentral.edu</span>
+            <button class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold" id="logout">
+              Salir
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8">
+        <div class="rounded-2xl border-2 border-slate-200 bg-white p-3 shadow-soft">
+          <div class="flex flex-wrap items-center gap-2">
+            <a class="rounded-full border-2 border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700" href="/admin/upload.html">
+              Info del flujo
+            </a>
+            <a class="rounded-full border-2 border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700" href="/admin/history.html">
+              Historial de lotes
+            </a>
+            <a class="rounded-full border-2 border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700" href="/admin/signing.html">
+              Firma en lote
+            </a>
+            <a class="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white" href="/admin/cedulas-validacion.html">
+              Validacion de cedulas
+            </a>
+          </div>
+        </div>
+
+        <section class="rounded-2xl border-2 border-slate-200 bg-white p-6 shadow-soft">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div class="max-w-3xl">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Validacion externa simulada</p>
+              <h2 class="mt-2 text-3xl font-extrabold text-slate-900">Sube el Excel y descarga una copia validada</h2>
+              <p class="mt-3 text-sm text-slate-600">
+                El sistema toma la cedula de cada fila, consulta una fuente externa simulada desde la API, compara
+                nombres y apellidos, revisa campos base para OmniSwitch y genera un nuevo Excel con auditoria y correcciones sugeridas.
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+              <button class="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700" id="run-validation" type="button">
+                Ejecutar validacion
+              </button>
+              <a
+                class="pointer-events-none rounded-xl bg-slate-300 px-4 py-3 text-sm font-semibold text-white shadow-sm"
+                id="download-validated"
+                href="#"
+              >
+                Descargar Excel validado
+              </a>
+            </div>
+          </div>
+
+          <p class="mt-4 text-sm text-slate-600" id="page-message">
+            Selecciona un archivo Excel y ejecuta la validacion.
+          </p>
+
+          <div class="mt-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Configuracion</p>
+              <div class="mt-4 grid gap-4 md:grid-cols-2">
+                <label class="block">
+                  <span class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Archivo Excel</span>
+                  <input
+                    class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm"
+                    id="excel-file"
+                    accept=".xlsx,.xls"
+                    type="file"
+                  />
+                </label>
+                <label class="block">
+                  <span class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Modo de consulta</span>
+                  <select class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm" id="query-mode">
+                    <option value="BASIC">Registro Civil - Basico</option>
+                    <option value="DEMOGRAPHIC">Registro Civil - Demografico</option>
+                  </select>
+                </label>
+              </div>
+              <div class="mt-4 flex flex-wrap gap-3">
+                <label class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                  <input checked class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" id="compare-names" type="checkbox" />
+                  <span>Comparar nombres</span>
+                </label>
+                <label class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                  <input checked class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" id="compare-lastnames" type="checkbox" />
+                  <span>Comparar apellidos</span>
+                </label>
+                <label class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                  <input checked class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" id="create-copy" type="checkbox" />
+                  <span>Crear copia corregida</span>
+                </label>
+              </div>
+              <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Archivo actual</p>
+                <p class="mt-2 text-sm font-semibold text-slate-900" id="file-name">Ningun archivo seleccionado</p>
+              </div>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-white p-5">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Resumen</p>
+              <div class="mt-4 grid grid-cols-2 gap-3">
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Procesadas</p>
+                  <p class="mt-2 text-3xl font-extrabold text-slate-900" id="stat-processed">0</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Coinciden</p>
+                  <p class="mt-2 text-3xl font-extrabold text-slate-900" id="stat-match">0</p>
+                </div>
+                <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                  <p class="text-xs uppercase tracking-[0.18em] text-amber-700">Corregibles</p>
+                  <p class="mt-2 text-3xl font-extrabold text-amber-900" id="stat-correctable">0</p>
+                </div>
+                <div class="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                  <p class="text-xs uppercase tracking-[0.18em] text-rose-700">Revision manual</p>
+                  <p class="mt-2 text-3xl font-extrabold text-rose-900" id="stat-review">0</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Errores</p>
+                  <p class="mt-2 text-3xl font-extrabold text-slate-900" id="stat-error">0</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Columnas detectadas</p>
+                  <p class="mt-2 text-sm font-bold text-slate-900" id="stat-columns">Sin datos</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-soft">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Resultados</p>
+              <h3 class="mt-2 text-lg font-bold text-slate-900">Filas comparadas contra la fuente externa</h3>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <input
+                class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm"
+                id="result-search"
+                placeholder="Buscar por cedula o nombre"
+                type="text"
+              />
+              <select class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm" id="status-filter">
+                <option value="ALL">Todos los estados</option>
+                <option value="MATCH">Coincide</option>
+                <option value="CORRECTABLE">Corregible</option>
+                <option value="REVIEW">Revision manual</option>
+                <option value="ERROR">Error</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <thead class="bg-slate-50">
+                  <tr class="text-left text-xs uppercase tracking-[0.18em] text-slate-400">
+                    <th class="px-4 py-3 font-semibold">Fila</th>
+                    <th class="px-4 py-3 font-semibold">Cedula</th>
+                    <th class="px-4 py-3 font-semibold">Excel original</th>
+                    <th class="px-4 py-3 font-semibold">Fuente externa</th>
+                    <th class="px-4 py-3 font-semibold">Estado</th>
+                    <th class="px-4 py-3 font-semibold">Accion</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 bg-white" id="result-list">
+                  <tr>
+                    <td class="px-4 py-4 text-slate-500" colspan="6">Todavia no hay resultados.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+          <article class="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-soft">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Detalle de fila</p>
+            <h3 class="mt-2 text-lg font-bold text-slate-900" id="detail-title">Selecciona un resultado</h3>
+            <div class="mt-4 space-y-4" id="detail-panel">
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p class="text-sm text-slate-600">Aqui veras la comparacion detallada entre el Excel y la fuente externa.</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="rounded-2xl border-2 border-slate-200 bg-white p-5 shadow-soft">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Excel validado</p>
+            <h3 class="mt-2 text-lg font-bold text-slate-900">Columnas de auditoria agregadas</h3>
+            <div class="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                  <thead class="bg-slate-50">
+                    <tr class="text-left text-xs uppercase tracking-[0.18em] text-slate-400">
+                      <th class="px-4 py-3 font-semibold">Columna</th>
+                      <th class="px-4 py-3 font-semibold">Uso</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200 bg-white">
+                    <tr>
+                      <td class="px-4 py-4 text-slate-700">nombre_completo_original</td>
+                      <td class="px-4 py-4 text-slate-700">Guarda el dato original del Excel.</td>
+                    </tr>
+                    <tr>
+                      <td class="px-4 py-4 text-slate-700">nombre_completo_validado</td>
+                      <td class="px-4 py-4 text-slate-700">Guarda el nombre devuelto por la fuente externa.</td>
+                    </tr>
+                    <tr>
+                      <td class="px-4 py-4 text-slate-700">estado_validacion</td>
+                      <td class="px-4 py-4 text-slate-700">Marca si coincide, es corregible, requiere revision o tuvo error.</td>
+                    </tr>
+                    <tr>
+                      <td class="px-4 py-4 text-slate-700">observacion_validacion</td>
+                      <td class="px-4 py-4 text-slate-700">Explica la decision aplicada por la API.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      function readStoredAuthValue(key) {
+        return window.localStorage.getItem(key) || window.sessionStorage.getItem(key) || "";
+      }
+
+      function clearStoredAuth() {
+        [window.localStorage, window.sessionStorage].forEach((storage) => {
+          storage.removeItem("auth_email");
+          storage.removeItem("auth_role");
+          storage.removeItem("auth_org_id");
+        });
+      }
+
+      function requireAuth(allowedRoles) {
+        const email = readStoredAuthValue("auth_email");
+        const role = readStoredAuthValue("auth_role");
+        const orgId = readStoredAuthValue("auth_org_id");
+        if (!email || !role) {
+          clearStoredAuth();
+          window.location.href = "/";
+          return null;
+        }
+        if (allowedRoles && !allowedRoles.includes(role)) {
+          clearStoredAuth();
+          window.location.href = "/";
+          return null;
+        }
+        return { email, role, orgId };
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function statusBadge(status) {
+        const styles = {
+          MATCH: "bg-emerald-100 text-emerald-800",
+          CORRECTABLE: "bg-amber-100 text-amber-800",
+          REVIEW: "bg-rose-100 text-rose-800",
+          ERROR: "bg-slate-200 text-slate-800",
+        };
+        return `<span class="rounded-full px-3 py-1 text-xs font-semibold ${styles[status] || "bg-slate-100 text-slate-700"}">${escapeHtml(status)}</span>`;
+      }
+
+      const apiBase =
+        window.API_BASE_URL ||
+        (window.location.port === "5173"
+          ? `${window.location.protocol}//${window.location.hostname}:8080`
+          : (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+            ? "http://localhost:8080"
+            : window.location.origin));
+
+      const auth = requireAuth(["ADMIN"]);
+      const userEmail = document.getElementById("user-email");
+      const logoutBtn = document.getElementById("logout");
+      const pageMessage = document.getElementById("page-message");
+      const excelFileInput = document.getElementById("excel-file");
+      const fileName = document.getElementById("file-name");
+      const queryMode = document.getElementById("query-mode");
+      const compareNames = document.getElementById("compare-names");
+      const compareLastnames = document.getElementById("compare-lastnames");
+      const createCopy = document.getElementById("create-copy");
+      const runValidationBtn = document.getElementById("run-validation");
+      const downloadValidated = document.getElementById("download-validated");
+      const resultSearch = document.getElementById("result-search");
+      const statusFilter = document.getElementById("status-filter");
+      const resultList = document.getElementById("result-list");
+      const detailTitle = document.getElementById("detail-title");
+      const detailPanel = document.getElementById("detail-panel");
+
+      const statProcessed = document.getElementById("stat-processed");
+      const statMatch = document.getElementById("stat-match");
+      const statCorrectable = document.getElementById("stat-correctable");
+      const statReview = document.getElementById("stat-review");
+      const statError = document.getElementById("stat-error");
+      const statColumns = document.getElementById("stat-columns");
+
+      let storedOrgId = auth?.orgId || "";
+      let validationItems = [];
+      let filteredItems = [];
+      let activeItemIndex = -1;
+      let currentRun = null;
+
+      if (auth?.email) {
+        userEmail.textContent = auth.email;
+      }
+
+      function resetDownload() {
+        downloadValidated.href = "#";
+        downloadValidated.className = "pointer-events-none rounded-xl bg-slate-300 px-4 py-3 text-sm font-semibold text-white shadow-sm";
+      }
+
+      function enableDownload(url) {
+        downloadValidated.href = `${apiBase}${url}`;
+        downloadValidated.className = "rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm";
+      }
+
+      function setSummary(run) {
+        const summary = run?.summary || {};
+        statProcessed.textContent = String(summary.processedCount || 0);
+        statMatch.textContent = String(summary.matchCount || 0);
+        statCorrectable.textContent = String(summary.correctableCount || 0);
+        statReview.textContent = String(summary.reviewCount || 0);
+        statError.textContent = String(summary.errorCount || 0);
+        const columns = run?.detectedColumns || {};
+        statColumns.textContent = [columns.cedula, columns.fullName || columns.names, columns.lastNames]
+          .filter(Boolean)
+          .join(" / ") || "Sin datos";
+      }
+
+      function renderDetail(item) {
+        if (!item) {
+          detailTitle.textContent = "Selecciona un resultado";
+          detailPanel.innerHTML = `
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p class="text-sm text-slate-600">Aqui veras la comparacion detallada entre el Excel y la fuente externa.</p>
+            </div>
+          `;
+          return;
+        }
+        detailTitle.textContent = `Fila ${item.excelRowNumber || item.rowIndex}`;
+        detailPanel.innerHTML = `
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Cedula</p>
+            <p class="mt-2 text-sm font-semibold text-slate-900">${escapeHtml(item.cedula || "")}</p>
+          </div>
+          <div class="rounded-2xl border border-slate-200 bg-white p-4">
+            <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Nombre en Excel</p>
+            <p class="mt-2 text-sm font-semibold text-slate-900">${escapeHtml(item.inputFullName || "Sin nombre")}</p>
+          </div>
+          <div class="rounded-2xl border border-slate-200 bg-white p-4">
+            <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Nombre de fuente externa</p>
+            <p class="mt-2 text-sm font-semibold text-slate-900">${escapeHtml(item.officialFullName || "Sin dato")}</p>
+          </div>
+          <div class="rounded-2xl border border-slate-200 bg-white p-4">
+            <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Estado</p>
+            <div class="mt-2">${statusBadge(item.status)}</div>
+            <p class="mt-3 text-sm text-slate-700">${escapeHtml(item.observation || "")}</p>
+            <p class="mt-2 text-xs font-semibold text-slate-500">${escapeHtml(item.actionLabel || "")}</p>
+          </div>
+          <div class="rounded-2xl border border-slate-200 bg-white p-4">
+            <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Checklist OmniSwitch</p>
+            <p class="mt-2 text-sm font-semibold text-slate-900">${item.omniReady ? "Listo para OmniSwitch" : "Pendiente para OmniSwitch"}</p>
+            <p class="mt-2 text-sm text-slate-700">${escapeHtml((item.omniIssues || []).join(" ") || "Sin observaciones para OmniSwitch.")}</p>
+          </div>
+        `;
+      }
+
+      function applyFilters() {
+        const search = String(resultSearch.value || "").trim().toLowerCase();
+        const filter = String(statusFilter.value || "ALL").trim().toUpperCase();
+        filteredItems = validationItems.filter((item) => {
+          const haystack = [item.cedula, item.inputFullName, item.officialFullName].join(" ").toLowerCase();
+          if (search && !haystack.includes(search)) return false;
+          if (filter !== "ALL" && String(item.status || "").toUpperCase() !== filter) return false;
+          return true;
+        });
+        if (!filteredItems.length) {
+          activeItemIndex = -1;
+        } else if (activeItemIndex < 0 || activeItemIndex >= filteredItems.length) {
+          activeItemIndex = 0;
+        }
+      }
+
+      function renderResults() {
+        applyFilters();
+        if (!filteredItems.length) {
+          resultList.innerHTML = "<tr><td class=\"px-4 py-4 text-slate-500\" colspan=\"6\">No hay resultados para los filtros actuales.</td></tr>";
+          renderDetail(null);
+          return;
+        }
+        resultList.innerHTML = filteredItems
+          .map((item, index) => {
+            const active = index === activeItemIndex;
+            return `
+              <tr class="${active ? "bg-primary/5" : ""}" data-index="${index}">
+                <td class="px-4 py-4 font-semibold text-slate-900">${escapeHtml(item.excelRowNumber || item.rowIndex || "")}</td>
+                <td class="px-4 py-4 text-slate-700">${escapeHtml(item.cedula || "")}</td>
+                <td class="px-4 py-4 text-slate-700">${escapeHtml(item.inputFullName || "")}</td>
+                <td class="px-4 py-4 text-slate-700">${escapeHtml(item.officialFullName || "")}</td>
+                <td class="px-4 py-4">${statusBadge(item.status)}</td>
+                <td class="px-4 py-4 text-slate-700">${escapeHtml(item.actionLabel || "")}</td>
+              </tr>
+            `;
+          })
+          .join("");
+        renderDetail(filteredItems[activeItemIndex] || null);
+      }
+
+      async function runValidation() {
+        const file = excelFileInput.files?.[0];
+        if (!storedOrgId) {
+          pageMessage.textContent = "El usuario no tiene organizacion asociada.";
+          return;
+        }
+        if (!file) {
+          pageMessage.textContent = "Selecciona un archivo Excel antes de continuar.";
+          return;
+        }
+
+        const form = new FormData();
+        form.append("organizationId", storedOrgId);
+        form.append("queryMode", queryMode.value);
+        form.append("compareNames", compareNames.checked ? "true" : "false");
+        form.append("compareLastNames", compareLastnames.checked ? "true" : "false");
+        form.append("createCorrectedCopy", createCopy.checked ? "true" : "false");
+        form.append("excel", file, file.name);
+
+        runValidationBtn.disabled = true;
+        pageMessage.textContent = "Validando cedulas contra la fuente externa...";
+        resetDownload();
+
+        try {
+          const res = await fetch(`${apiBase}/v1/rc-validations/run`, {
+            method: "POST",
+            body: form,
+          });
+          const rawText = await res.text();
+          let data = {};
+          try {
+            data = rawText ? JSON.parse(rawText) : {};
+          } catch (parseError) {
+            data = { error: rawText || "Respuesta no JSON del servidor." };
+          }
+          if (!res.ok) {
+            pageMessage.textContent = data.detail || data.error || "No se pudo ejecutar la validacion.";
+            return;
+          }
+
+          currentRun = data.run || null;
+          validationItems = Array.isArray(data.items) ? data.items : [];
+          setSummary(currentRun);
+          renderResults();
+          if (currentRun?.downloadUrl) {
+            enableDownload(currentRun.downloadUrl);
+          }
+          pageMessage.textContent = `Validacion terminada. Se procesaron ${currentRun?.summary?.processedCount || 0} fila(s).`;
+        } catch (error) {
+          pageMessage.textContent = `Error al ejecutar la validacion: ${error?.message || "fallo de red"}.`;
+        } finally {
+          runValidationBtn.disabled = false;
+        }
+      }
+
+      logoutBtn.addEventListener("click", () => {
+        clearStoredAuth();
+        window.location.href = "/";
+      });
+
+      excelFileInput.addEventListener("change", () => {
+        const file = excelFileInput.files?.[0];
+        fileName.textContent = file ? file.name : "Ningun archivo seleccionado";
+      });
+
+      runValidationBtn.addEventListener("click", runValidation);
+      resultSearch.addEventListener("input", renderResults);
+      statusFilter.addEventListener("change", renderResults);
+      resultList.addEventListener("click", (event) => {
+        const row = event.target.closest("[data-index]");
+        if (!row) return;
+        activeItemIndex = Number(row.dataset.index || 0);
+        renderResults();
+      });
+
+      resetDownload();
+      renderResults();
+    </script>
+  </body>
+</html>

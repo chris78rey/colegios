@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Firma en Lote | Firma Educativa</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#197fe6",
+              ink: "#0f172a",
+              mist: "#f6f7f8",
+            },
+            fontFamily: {
+              display: ["Manrope", "sans-serif"],
+            },
+            boxShadow: {
+              soft: "0 25px 60px -30px rgba(15, 23, 42, 0.22)",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      :root {
+        --ui-line: #94a3b8;
+        --ui-line-strong: #334155;
+        --ui-soft-text: #334155;
+        --ui-muted-text: #475569;
+        --ui-focus-ring: rgba(25, 127, 230, 0.28);
+      }
+
+      .border-slate-200 {
+        border-color: var(--ui-line) !important;
+      }
+
+      .text-slate-400 {
+        color: var(--ui-muted-text) !important;
+      }
+
+      .text-slate-500,
+      .text-slate-600 {
+        color: var(--ui-soft-text) !important;
+      }
+
+      .bg-slate-50 {
+        background-color: #f8fafc !important;
+      }
+
+      body {
+        background:
+          radial-gradient(1200px 600px at 10% -10%, rgba(25, 127, 230, 0.12), transparent 55%),
+          radial-gradient(900px 500px at 90% 0%, rgba(14, 165, 233, 0.1), transparent 60%),
+          #f6f7f8;
+      }
+
+      button,
+      input,
+      select,
+      a,
+      iframe {
+        transition: box-shadow 120ms ease, border-color 120ms ease, background-color 120ms ease;
+      }
+
+      input:focus-visible,
+      select:focus-visible,
+      button:focus-visible,
+      a:focus-visible {
+        outline: 3px solid var(--ui-line-strong);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px var(--ui-focus-ring);
+      }
+    </style>
+  </head>
+  <body class="bg-mist font-display text-ink">
+    <div class="min-h-screen">
+      <header class="border-b-2 border-slate-200 bg-white">
+        <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-primary">draw</span>
+            <div>
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Admin Colegio</p>
+              <h1 class="text-lg font-bold">Enviar bloque a firma</h1>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 text-sm text-slate-600">
+            <span id="user-email">admin@colegiocentral.edu</span>
+            <button class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold" id="logout">
+              Salir
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-8">
+        <div class="rounded-2xl border-2 border-slate-200 bg-white p-3 shadow-soft">
+          <div class="flex flex-wrap items-center gap-2">
+            <a class="rounded-full border-2 border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700" href="/admin/upload.html">
+              Info del flujo
+            </a>
+            <a class="rounded-full border-2 border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700" href="/admin/history.html">
+              Historial de lotes
+            </a>
+            <a class="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white" href="/admin/signing.html">
+              Firma en lote
+            </a>
+            <a class="rounded-full border-2 border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700" href="/admin/cedulas-validacion.html">
+              Validacion de cedulas
+            </a>
+          </div>
+        </div>
+
+        <section class="rounded-2xl border-2 border-slate-200 bg-white p-6 shadow-soft">
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Operacion unica</p>
+              <h2 class="mt-2 text-3xl font-extrabold text-slate-900">PDFs cargados, firmantes visibles y un solo envio</h2>
+              <p class="mt-3 max-w-3xl text-sm text-slate-600">
+                Cada bloque corresponde a una fila del Excel. Se usa solo el primer PDF como referencia visual, aunque el envio conserve todos los documentos del bloque.
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button class="rounded-xl border-2 border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700" id="refresh-all" type="button">
+                Actualizar
+              </button>
+              <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm" id="send-batch" type="button">
+                Enviar bloque a firma
+              </button>
+            </div>
+          </div>
+          <p class="mt-3 text-xs text-slate-500" id="page-message">Selecciona un lote para preparar el envio.</p>
+
+          <div class="mt-6 grid gap-4 xl:grid-cols-[320px_minmax(520px,1fr)]">
+            <aside class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Lote</p>
+                  <h3 class="mt-2 text-lg font-bold text-slate-900">Seleccion</h3>
+                </div>
+                <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700" id="batch-count">0 lotes</span>
+              </div>
+              <div class="mt-4 space-y-3">
+                <input
+                  class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm"
+                  id="batch-search"
+                  placeholder="Buscar por Excel"
+                  type="text"
+                />
+                <label class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
+                  <input class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" id="latest-only" type="checkbox" checked />
+                  <span>Usar solo el ultimo lote</span>
+                </label>
+              </div>
+              <div class="mt-4 max-h-[28vh] space-y-3 overflow-y-auto pr-1" id="batch-list">
+                <div class="text-sm text-slate-500">No hay lotes disponibles.</div>
+              </div>
+
+              <div class="mt-5 border-t border-slate-200 pt-4">
+                <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Controles de envio</p>
+                <div class="mt-3 space-y-3">
+                  <div>
+                    <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400" for="id-process">
+                      Tipo de firma
+                    </label>
+                    <select class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm" id="id-process">
+                      <option value="10">Acreditada (10)</option>
+                      <option value="11">Avanzada (11)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400" for="billing-mode">
+                      Cobro
+                    </label>
+                    <select class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm" id="billing-mode">
+                      <option value="ORG_BALANCE">Paga institucion</option>
+                      <option value="SIGNER_PAYS">Paga firmante</option>
+                    </select>
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                    <div>
+                      <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400" for="billing-amount">
+                        Monto
+                      </label>
+                      <input class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm" id="billing-amount" type="number" min="0" step="0.01" value="0.00" />
+                    </div>
+                    <div>
+                      <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400" for="billing-currency">
+                        Moneda
+                      </label>
+                      <input class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm" id="billing-currency" type="text" value="USD" />
+                    </div>
+                  </div>
+                  <div id="payment-reference-wrap" class="hidden">
+                    <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400" for="payment-reference">
+                      Referencia de pago
+                    </label>
+                    <input class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm" id="payment-reference" type="text" placeholder="Ej. telefono del firmante" />
+                  </div>
+                  <label class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+                    <input class="mt-1 h-4 w-4 rounded border-amber-300 text-primary focus:ring-primary" id="force-resend" type="checkbox" />
+                    <span>
+                      Permitir reenvio si el bloque ya fue enviado.
+                      <span class="block text-xs text-amber-800">Usalo solo cuando aceptes un posible costo adicional.</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </aside>
+
+            <section class="rounded-2xl border border-slate-200 bg-white p-4">
+              <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Bloques listos</p>
+                  <h3 class="mt-2 text-lg font-bold text-slate-900" id="selected-batch-title">Selecciona un lote</h3>
+                </div>
+                <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                    <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Bloques</p>
+                    <p class="mt-2 text-2xl font-extrabold text-slate-900" id="stat-blocks">0</p>
+                  </div>
+                  <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                    <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Ya enviados</p>
+                    <p class="mt-2 text-2xl font-extrabold text-slate-900" id="stat-sent">0</p>
+                  </div>
+                  <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                    <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Duplicados</p>
+                    <p class="mt-2 text-2xl font-extrabold text-slate-900" id="stat-duplicates">0</p>
+                  </div>
+                  <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
+                    <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Firmados</p>
+                    <p class="mt-2 text-2xl font-extrabold text-slate-900" id="stat-signed">0</p>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div class="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Excel</p>
+                    <p class="mt-2 text-sm font-semibold text-slate-900" id="detail-source-excel">Sin lote seleccionado</p>
+                  </div>
+                  <div>
+                    <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Fecha</p>
+                    <p class="mt-2 text-sm font-semibold text-slate-900" id="detail-created-at">Sin fecha</p>
+                  </div>
+                  <div>
+                    <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Documentos</p>
+                    <p class="mt-2 text-sm font-semibold text-slate-900" id="detail-document-count">0 PDF(s)</p>
+                  </div>
+                  <div>
+                    <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Filas</p>
+                    <p class="mt-2 text-sm font-semibold text-slate-900" id="detail-row-count">0 fila(s)</p>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-5 max-h-[66vh] space-y-3 overflow-y-auto pr-1" id="block-list">
+                <div class="text-sm text-slate-500">Selecciona un lote para ver los bloques listos para firma.</div>
+              </div>
+            </section>
+
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="fixed inset-0 z-40 hidden items-center justify-center bg-slate-900/55 p-4" id="reference-modal">
+      <div class="flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border-2 border-slate-200 bg-white shadow-soft">
+        <div class="flex items-center justify-between border-b-2 border-slate-200 px-4 py-3">
+          <div>
+            <p class="text-sm font-semibold text-slate-900">Referencia del bloque</p>
+            <p class="text-xs text-slate-500" id="reference-title">Selecciona un bloque</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="rounded-lg border-2 border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700" id="poll-request" type="button">
+              Actualizar estado
+            </button>
+            <button class="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white" id="mock-sign" type="button">
+              Firmar mock
+            </button>
+            <a
+              class="rounded-lg border-2 border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700"
+              href="#"
+              id="download-current-pdf"
+              target="_blank"
+              rel="noopener"
+            >
+              Descargar PDF
+            </a>
+            <button class="rounded-lg border-2 border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700" id="reference-close" type="button">
+              Cerrar
+            </button>
+          </div>
+        </div>
+        <div class="border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700" id="selected-block-meta">
+          Sin bloque seleccionado.
+        </div>
+        <div class="flex-1 bg-slate-100">
+          <iframe class="h-full w-full" id="reference-frame" title="Vista previa firma"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function readStoredAuthValue(key) {
+        return window.localStorage.getItem(key) || window.sessionStorage.getItem(key) || "";
+      }
+
+      function clearStoredAuth() {
+        [window.localStorage, window.sessionStorage].forEach((storage) => {
+          storage.removeItem("auth_email");
+          storage.removeItem("auth_role");
+          storage.removeItem("auth_org_id");
+        });
+      }
+
+      function requireAuth(allowedRoles) {
+        const email = readStoredAuthValue("auth_email");
+        const role = readStoredAuthValue("auth_role");
+        const orgId = readStoredAuthValue("auth_org_id");
+        if (!email || !role) {
+          clearStoredAuth();
+          window.location.href = "/";
+          return null;
+        }
+        if (allowedRoles && !allowedRoles.includes(role)) {
+          clearStoredAuth();
+          window.location.href = "/";
+          return null;
+        }
+        return { email, role, orgId };
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const requestedBatchId = params.get("batchId") || "";
+      const apiBase =
+        window.API_BASE_URL ||
+        (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+          ? "http://localhost:8080"
+          : window.location.origin);
+
+      const userEmail = document.getElementById("user-email");
+      const pageMessage = document.getElementById("page-message");
+      const batchCount = document.getElementById("batch-count");
+      const batchSearch = document.getElementById("batch-search");
+      const latestOnly = document.getElementById("latest-only");
+      const batchList = document.getElementById("batch-list");
+      const idProcess = document.getElementById("id-process");
+      const billingMode = document.getElementById("billing-mode");
+      const billingAmount = document.getElementById("billing-amount");
+      const billingCurrency = document.getElementById("billing-currency");
+      const forceResend = document.getElementById("force-resend");
+      const paymentReferenceWrap = document.getElementById("payment-reference-wrap");
+      const paymentReference = document.getElementById("payment-reference");
+      const sendBatchBtn = document.getElementById("send-batch");
+      const refreshAllBtn = document.getElementById("refresh-all");
+      const selectedBatchTitle = document.getElementById("selected-batch-title");
+      const detailSourceExcel = document.getElementById("detail-source-excel");
+      const detailCreatedAt = document.getElementById("detail-created-at");
+      const detailDocumentCount = document.getElementById("detail-document-count");
+      const detailRowCount = document.getElementById("detail-row-count");
+      const statBlocks = document.getElementById("stat-blocks");
+      const statSent = document.getElementById("stat-sent");
+      const statDuplicates = document.getElementById("stat-duplicates");
+      const statSigned = document.getElementById("stat-signed");
+      const blockList = document.getElementById("block-list");
+      const referenceModal = document.getElementById("reference-modal");
+      const referenceTitle = document.getElementById("reference-title");
+      const referenceClose = document.getElementById("reference-close");
+      const selectedBlockMeta = document.getElementById("selected-block-meta");
+      const referenceFrame = document.getElementById("reference-frame");
+      const downloadCurrentPdf = document.getElementById("download-current-pdf");
+      const pollRequestBtn = document.getElementById("poll-request");
+      const mockSignBtn = document.getElementById("mock-sign");
+
+      let storedOrgId = "";
+      let desktopBatches = [];
+      let filteredBatches = [];
+      let batchDocuments = [];
+      let omniRequests = [];
+      let groupedBlocks = [];
+      let activeBatchId = "";
+      let activeBlockKey = "";
+
+      function openReferenceModal() {
+        referenceModal.classList.remove("hidden");
+        referenceModal.classList.add("flex");
+      }
+
+      function closeReferenceModal() {
+        referenceModal.classList.add("hidden");
+        referenceModal.classList.remove("flex");
+        referenceFrame.src = "";
+        downloadCurrentPdf.href = "#";
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function formatDateTime(value) {
+        if (!value) return "Sin fecha";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+        return date.toLocaleString("es-CO", {
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      function statusBadge(status, kind = "default") {
+        const normalized = String(status || "").toUpperCase();
+        const styles =
+          kind === "omni"
+            ? {
+                SENT: "border-sky-200 bg-sky-50 text-sky-700",
+                PARTIALLY_SIGNED: "border-amber-200 bg-amber-50 text-amber-700",
+                SIGNED: "border-emerald-200 bg-emerald-50 text-emerald-700",
+                DOWNLOADED: "border-emerald-200 bg-emerald-50 text-emerald-700",
+                ERROR: "border-red-200 bg-red-50 text-red-700",
+              }
+            : {
+                IMPORTED: "border-emerald-200 bg-emerald-50 text-emerald-700",
+                READY: "border-emerald-200 bg-emerald-50 text-emerald-700",
+                ERROR: "border-red-200 bg-red-50 text-red-700",
+              };
+        const className = styles[normalized] || "border-slate-200 bg-slate-50 text-slate-700";
+        return `<span class="inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold ${className}">${normalized || "SIN ESTADO"}</span>`;
+      }
+
+      function signerData(row) {
+        if (!row || typeof row !== "object") {
+          return { fullName: "", email: "", phone: "", idNumber: "" };
+        }
+        const fullName = [row.PrimerNombre, row.SegunNombre, row.PrimerApellido, row.SegApellido]
+          .map((value) => String(value || "").trim())
+          .filter(Boolean)
+          .join(" ");
+        return {
+          fullName,
+          email: String(row.Email || "").trim(),
+          phone: String(row.Celular || "").trim(),
+          idNumber: String(row.Cedula || "").trim(),
+        };
+      }
+
+      function applyBatchFilters() {
+        const searchValue = String(batchSearch.value || "").trim().toLowerCase();
+        filteredBatches = [...desktopBatches]
+          .filter((item) => !searchValue || String(item.sourceExcel || "").toLowerCase().includes(searchValue))
+          .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+        if (latestOnly.checked && filteredBatches.length > 1) {
+          filteredBatches = [filteredBatches[0]];
+        }
+        if (activeBatchId && !filteredBatches.some((item) => item.id === activeBatchId)) {
+          activeBatchId = filteredBatches[0]?.id || "";
+        }
+      }
+
+      function renderBatches() {
+        batchCount.textContent = `${filteredBatches.length} lote(s)`;
+        if (!filteredBatches.length) {
+          batchList.innerHTML = "<div class=\"text-sm text-slate-500\">No hay lotes disponibles.</div>";
+          return;
+        }
+        batchList.innerHTML = filteredBatches
+          .map((item) => {
+            const isActive = item.id === activeBatchId;
+            return `
+              <button
+                class="w-full rounded-2xl border-2 px-4 py-4 text-left ${isActive ? "border-primary bg-primary/5" : "border-slate-200 bg-white"}"
+                data-batch-id="${escapeHtml(item.id)}"
+                type="button"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="truncate text-sm font-bold text-slate-900">${escapeHtml(item.sourceExcel || "excel_local.xlsx")}</div>
+                    <div class="mt-1 text-xs text-slate-500">${escapeHtml(formatDateTime(item.createdAt))}</div>
+                  </div>
+                  ${statusBadge(item.status)}
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2 text-xs text-slate-600">
+                  <span class="rounded-full bg-slate-100 px-3 py-1 font-semibold">${Number(item.documentCount || 0)} PDF(s)</span>
+                  <span class="rounded-full bg-slate-100 px-3 py-1 font-semibold">${Number(item.rowCount || 0)} fila(s)</span>
+                </div>
+              </button>
+            `;
+          })
+          .join("");
+      }
+
+      function renderBatchMeta() {
+        const batch = desktopBatches.find((item) => item.id === activeBatchId) || null;
+        selectedBatchTitle.textContent = batch ? batch.sourceExcel || "Lote importado" : "Selecciona un lote";
+        detailSourceExcel.textContent = batch ? batch.sourceExcel || "excel_local.xlsx" : "Sin lote seleccionado";
+        detailCreatedAt.textContent = batch ? formatDateTime(batch.createdAt) : "Sin fecha";
+        detailDocumentCount.textContent = batch ? `${Number(batch.documentCount || 0)} PDF(s)` : "0 PDF(s)";
+        detailRowCount.textContent = batch ? `${Number(batch.rowCount || 0)} fila(s)` : "0 fila(s)";
+      }
+
+      function buildGroupedBlocks() {
+        const requestMap = new Map();
+        omniRequests.forEach((request) => {
+          (request.documents || []).forEach((document) => {
+            if (document.desktopDocumentId) {
+              requestMap.set(document.desktopDocumentId, request);
+            }
+          });
+        });
+
+        const blocks = new Map();
+        batchDocuments.forEach((document) => {
+          const key = `${document.rowIndex}::${document.groupKey || ""}`;
+          if (!blocks.has(key)) {
+            blocks.set(key, {
+              key,
+              rowIndex: document.rowIndex,
+              groupKey: document.groupKey || "",
+              row: document.row || {},
+              documents: [],
+              request: null,
+              duplicates: [],
+            });
+          }
+          const block = blocks.get(key);
+          block.documents.push(document);
+          block.request = block.request || requestMap.get(document.id) || null;
+        });
+
+        const duplicateIndex = new Map();
+        Array.from(blocks.values()).forEach((block) => {
+          const signer = signerData(block.row);
+          ["idNumber"].forEach((field) => {
+            const value = String(signer[field] || "").trim().toLowerCase();
+            if (!value) return;
+            if (!duplicateIndex.has(`${field}:${value}`)) duplicateIndex.set(`${field}:${value}`, []);
+            duplicateIndex.get(`${field}:${value}`).push(block.key);
+          });
+        });
+
+        Array.from(blocks.values()).forEach((block) => {
+          const signer = signerData(block.row);
+          const alerts = [];
+          ["idNumber"].forEach((field) => {
+            const value = String(signer[field] || "").trim().toLowerCase();
+            if (!value) return;
+            const matches = duplicateIndex.get(`${field}:${value}`) || [];
+            if (matches.length > 1) {
+              alerts.push("Cedula duplicada");
+            }
+          });
+          if (block.request) alerts.push("Ya enviado");
+          block.duplicates = Array.from(new Set(alerts));
+        });
+
+        groupedBlocks = Array.from(blocks.values()).sort((a, b) => Number(a.rowIndex || 0) - Number(b.rowIndex || 0));
+        if (activeBlockKey && !groupedBlocks.some((item) => item.key === activeBlockKey)) {
+          activeBlockKey = groupedBlocks[0]?.key || "";
+        }
+        if (!activeBlockKey && groupedBlocks[0]) {
+          activeBlockKey = groupedBlocks[0].key;
+        }
+      }
+
+      function updateStats() {
+        statBlocks.textContent = String(groupedBlocks.length);
+        statSent.textContent = String(groupedBlocks.filter((block) => !!block.request).length);
+        statDuplicates.textContent = String(groupedBlocks.filter((block) => block.duplicates.length > 0).length);
+        statSigned.textContent = String(
+          groupedBlocks.reduce((sum, block) => {
+            const request = block.request;
+            if (!request) return sum;
+            return sum + (request.documents || []).filter((doc) => String(doc.providerSignedFlag || "") === "1").length;
+          }, 0)
+        );
+      }
+
+      function getActiveBlock() {
+        return groupedBlocks.find((item) => item.key === activeBlockKey) || null;
+      }
+
+      function getBlockReference(block) {
+        if (!block) {
+          return {
+            title: "Selecciona un bloque",
+            fileUrl: "",
+            meta: "Sin bloque seleccionado.",
+          };
+        }
+        const request = block.request;
+        const requestDoc =
+          request?.documents?.find((document) => document.signedPdfUrl) ||
+          request?.documents?.find((document) => document.localPdfUrl) ||
+          null;
+        const fallbackDoc = block.documents[0] || null;
+        const signer = signerData(block.row);
+        return {
+          title: request ? request.providerRequestId || request.id : `Registro ${Number(block.rowIndex || 0) + 1}`,
+          fileUrl: requestDoc?.signedPdfUrl || requestDoc?.localPdfUrl || fallbackDoc?.pdfUrl || "",
+          meta: `
+            <div class="space-y-2">
+              <div><strong>Firmante:</strong> ${escapeHtml(signer.fullName || "Sin nombre")}</div>
+              <div><strong>Cedula:</strong> ${escapeHtml(signer.idNumber || "Sin cedula")}</div>
+              <div><strong>Email:</strong> ${escapeHtml(signer.email || "Sin email")}</div>
+              <div><strong>Celular:</strong> ${escapeHtml(signer.phone || "Sin celular")}</div>
+              <div><strong>Documentos del bloque:</strong> ${Number(block.documents.length || 0)}</div>
+            </div>
+          `,
+        };
+      }
+
+      function updateReferenceControls() {
+        const block = getActiveBlock();
+        const reference = getBlockReference(block);
+        referenceTitle.textContent = reference.title;
+        selectedBlockMeta.innerHTML = reference.meta;
+        pollRequestBtn.disabled = !block?.request;
+        mockSignBtn.disabled = !block?.request;
+      }
+
+      function openReferenceForBlock(blockKey) {
+        activeBlockKey = blockKey || activeBlockKey;
+        renderBlocks();
+        const reference = getBlockReference(getActiveBlock());
+        referenceTitle.textContent = reference.title;
+        selectedBlockMeta.innerHTML = reference.meta;
+        if (reference.fileUrl) {
+          const fullUrl = `${apiBase}${reference.fileUrl}`;
+          referenceFrame.src = `${fullUrl}#toolbar=0&navpanes=0&scrollbar=1`;
+          downloadCurrentPdf.href = fullUrl;
+        } else {
+          referenceFrame.src = "";
+          downloadCurrentPdf.href = "#";
+        }
+        openReferenceModal();
+      }
+
+      function renderBlocks() {
+        updateStats();
+        if (!groupedBlocks.length) {
+          blockList.innerHTML = "<div class=\"text-sm text-slate-500\">Selecciona un lote para ver los bloques listos para firma.</div>";
+          updateReferenceControls();
+          return;
+        }
+        blockList.innerHTML = groupedBlocks
+          .map((block) => {
+            const signer = signerData(block.row);
+            const isActive = block.key === activeBlockKey;
+            const request = block.request;
+            const requestStatus = request ? request.status || "SENT" : "LISTO_PARA_ENVIAR";
+            return `
+              <button
+                class="w-full rounded-2xl border-2 px-4 py-4 text-left ${isActive ? "border-primary bg-primary/5" : "border-slate-200 bg-white"}"
+                data-block-key="${escapeHtml(block.key)}"
+                type="button"
+              >
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <p class="text-sm font-bold text-slate-900">Registro ${Number(block.rowIndex || 0) + 1}</p>
+                      ${request ? statusBadge(requestStatus, "omni") : `<span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">LISTO PARA ENVIAR</span>`}
+                    </div>
+                    <p class="mt-1 text-sm font-semibold text-slate-800">${escapeHtml(signer.fullName || "Firmante sin nombre")}</p>
+                    <p class="mt-1 text-xs text-slate-500">${escapeHtml(signer.idNumber || "Sin cedula")} · ${escapeHtml(signer.email || "Sin email")} · ${escapeHtml(signer.phone || "Sin celular")}</p>
+                    ${
+                      block.duplicates.length
+                        ? `<div class="mt-3 flex flex-wrap gap-2">${block.duplicates.map((alert) => `<span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">${escapeHtml(alert)}</span>`).join("")}</div>`
+                        : ""
+                    }
+                  </div>
+                  <div class="flex flex-col items-start gap-2 text-xs text-slate-600">
+                    <span class="rounded-full bg-slate-100 px-3 py-1 font-semibold">${block.documents.length} PDF(s)</span>
+                    <span class="rounded-full bg-slate-100 px-3 py-1 font-semibold">${request ? (request.documents || []).filter((doc) => String(doc.providerSignedFlag || "") === "1").length : 0} firmado(s)</span>
+                    ${request ? `<span class="rounded-full bg-slate-100 px-3 py-1 font-semibold">${escapeHtml(request.billingMode || "ORG_BALANCE")}</span>` : ""}
+                  </div>
+                </div>
+                <div class="mt-4">
+                  <button class="rounded-lg border-2 border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700" data-reference-block-key="${escapeHtml(block.key)}" type="button">
+                    Ver referencia
+                  </button>
+                </div>
+              </button>
+            `;
+          })
+          .join("");
+        updateReferenceControls();
+      }
+
+      async function loadDesktopBatches(silent = false) {
+        if (!storedOrgId) {
+          pageMessage.textContent = "No hay organizacion asociada al usuario.";
+          return;
+        }
+        try {
+          if (!silent) pageMessage.textContent = "Cargando lotes...";
+          const res = await fetch(`${apiBase}/v1/desktop-batches?organizationId=${encodeURIComponent(storedOrgId)}`);
+          const data = await res.json();
+          if (!res.ok) {
+            pageMessage.textContent = data.error || "No se pudieron cargar los lotes.";
+            return;
+          }
+          desktopBatches = Array.isArray(data.items) ? data.items : [];
+          if (requestedBatchId && desktopBatches.some((item) => item.id === requestedBatchId)) {
+            activeBatchId = requestedBatchId;
+          }
+          if (!activeBatchId && desktopBatches[0]) {
+            activeBatchId = desktopBatches[0].id;
+          }
+          applyBatchFilters();
+          renderBatches();
+          renderBatchMeta();
+          await loadBatchContext(activeBatchId, true);
+          if (!silent) pageMessage.textContent = "Lotes actualizados.";
+        } catch (error) {
+          pageMessage.textContent = "Error de red al cargar lotes.";
+        }
+      }
+
+      async function loadBatchContext(batchId, silent = false) {
+        if (!batchId) {
+          batchDocuments = [];
+          omniRequests = [];
+          groupedBlocks = [];
+          renderBlocks();
+          return;
+        }
+        try {
+          if (!silent) pageMessage.textContent = "Cargando documentos y solicitudes...";
+          const [docsRes, requestsRes] = await Promise.all([
+            fetch(`${apiBase}/v1/desktop-batches/${batchId}/documents`),
+            fetch(`${apiBase}/v1/omni-requests?desktopBatchId=${encodeURIComponent(batchId)}`),
+          ]);
+          const docsData = await docsRes.json();
+          const requestsData = await requestsRes.json();
+          if (!docsRes.ok) {
+            pageMessage.textContent = docsData.error || "No se pudieron cargar los documentos del lote.";
+            return;
+          }
+          if (!requestsRes.ok) {
+            pageMessage.textContent = requestsData.error || "No se pudieron cargar las solicitudes de firma.";
+            return;
+          }
+          batchDocuments = Array.isArray(docsData.items) ? docsData.items : [];
+          omniRequests = Array.isArray(requestsData.items) ? requestsData.items : [];
+          buildGroupedBlocks();
+          renderBlocks();
+          if (!silent) {
+            pageMessage.textContent = groupedBlocks.length
+              ? "Bloques listos para firma cargados."
+              : "No hay bloques disponibles para este lote.";
+          }
+        } catch (error) {
+          pageMessage.textContent = "Error de red al cargar el contexto del lote.";
+        }
+      }
+
+      function collectSendPayload() {
+        return {
+          idProcess: Number(idProcess.value || 10),
+          billingMode: String(billingMode.value || "ORG_BALANCE"),
+          billingAmount: String(billingAmount.value || "0.00"),
+          billingCurrency: String(billingCurrency.value || "USD").trim().toUpperCase() || "USD",
+          paymentReference: String(paymentReference.value || "").trim(),
+          forceResend: !!forceResend.checked,
+        };
+      }
+
+      async function sendBatchToSign() {
+        if (!activeBatchId) {
+          pageMessage.textContent = "Selecciona un lote antes de enviarlo.";
+          return;
+        }
+        const alreadySent = groupedBlocks.filter((block) => !!block.request).length;
+        if (alreadySent > 0 && !forceResend.checked) {
+          pageMessage.textContent = "Este lote ya tiene bloques enviados. Activa la confirmacion de reenvio si realmente quieres volver a enviarlo.";
+          return;
+        }
+        if (alreadySent > 0 && forceResend.checked) {
+          const confirmed = window.confirm("Este lote ya fue enviado total o parcialmente. Reenviar puede generar costos adicionales. Deseas continuar?");
+          if (!confirmed) return;
+        }
+        if (String(billingMode.value || "") === "SIGNER_PAYS" && !String(paymentReference.value || "").trim()) {
+          pageMessage.textContent = "Cuando paga el firmante debes indicar una referencia de pago.";
+          return;
+        }
+        sendBatchBtn.disabled = true;
+        pageMessage.textContent = "Enviando bloque a firma...";
+        try {
+          const res = await fetch(`${apiBase}/v1/desktop-batches/${activeBatchId}/omni/send`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(collectSendPayload()),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            pageMessage.textContent = data.error === "already_sent"
+              ? "Este lote ya fue enviado. Si deseas repetirlo, activa el control de reenvio."
+              : (data.error || "No se pudo enviar el lote a firma.");
+            return;
+          }
+          await loadBatchContext(activeBatchId, true);
+          pageMessage.textContent = `Se procesaron ${Array.isArray(data.items) ? data.items.length : 0} bloque(s) en modo ${data.mode || "mock"}.`;
+        } catch (error) {
+          pageMessage.textContent = "Error de red al enviar el lote a firma.";
+        } finally {
+          sendBatchBtn.disabled = false;
+        }
+      }
+
+      async function pollActiveRequest() {
+        const block = groupedBlocks.find((item) => item.key === activeBlockKey);
+        const requestId = block?.request?.id || "";
+        if (!requestId) return;
+        pageMessage.textContent = "Actualizando estado del bloque...";
+        try {
+          const res = await fetch(`${apiBase}/v1/omni-requests/${requestId}/poll`, { method: "POST" });
+          const data = await res.json();
+          if (!res.ok) {
+            pageMessage.textContent = data.error || "No se pudo actualizar el bloque.";
+            return;
+          }
+          await loadBatchContext(activeBatchId, true);
+          pageMessage.textContent = `Bloque ${data.item?.providerRequestId || requestId} actualizado.`;
+        } catch (error) {
+          pageMessage.textContent = "Error de red al actualizar el bloque.";
+        }
+      }
+
+      async function signActiveRequestMock() {
+        const block = groupedBlocks.find((item) => item.key === activeBlockKey);
+        const requestId = block?.request?.id || "";
+        if (!requestId) return;
+        pageMessage.textContent = "Firmando bloque en mock...";
+        try {
+          const res = await fetch(`${apiBase}/v1/omni-requests/${requestId}/mock-sign`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({}),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            pageMessage.textContent = data.error || "No se pudo firmar el bloque en mock.";
+            return;
+          }
+          await loadBatchContext(activeBatchId, true);
+          pageMessage.textContent = `Bloque ${data.item?.providerRequestId || requestId} firmado en mock.`;
+        } catch (error) {
+          pageMessage.textContent = "Error de red al firmar el bloque en mock.";
+        }
+      }
+
+      referenceClose.addEventListener("click", closeReferenceModal);
+      referenceModal.addEventListener("click", (event) => {
+        if (event.target === referenceModal) closeReferenceModal();
+      });
+
+      batchSearch.addEventListener("input", () => {
+        applyBatchFilters();
+        renderBatches();
+      });
+
+      latestOnly.addEventListener("change", () => {
+        applyBatchFilters();
+        renderBatches();
+      });
+
+      billingMode.addEventListener("change", () => {
+        const signerPays = String(billingMode.value || "") === "SIGNER_PAYS";
+        paymentReferenceWrap.classList.toggle("hidden", !signerPays);
+        if (!signerPays) {
+          paymentReference.value = "";
+        }
+      });
+
+      batchList.addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-batch-id]");
+        if (!button) return;
+        activeBatchId = button.dataset.batchId || "";
+        activeBlockKey = "";
+        renderBatches();
+        renderBatchMeta();
+        await loadBatchContext(activeBatchId);
+      });
+
+      blockList.addEventListener("click", (event) => {
+        const referenceButton = event.target.closest("[data-reference-block-key]");
+        if (referenceButton) {
+          openReferenceForBlock(referenceButton.dataset.referenceBlockKey || "");
+          return;
+        }
+        const button = event.target.closest("[data-block-key]");
+        if (!button) return;
+        activeBlockKey = button.dataset.blockKey || "";
+        renderBlocks();
+      });
+
+      refreshAllBtn.addEventListener("click", async () => {
+        await loadDesktopBatches();
+      });
+
+      sendBatchBtn.addEventListener("click", sendBatchToSign);
+      pollRequestBtn.addEventListener("click", pollActiveRequest);
+      mockSignBtn.addEventListener("click", signActiveRequestMock);
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeReferenceModal();
+      });
+
+      async function initPage() {
+        const auth = requireAuth(["ADMIN"]);
+        const storedEmail = auth?.email || readStoredAuthValue("auth_email");
+        storedOrgId = auth?.orgId || readStoredAuthValue("auth_org_id");
+        if (storedEmail) userEmail.textContent = storedEmail;
+
+        document.getElementById("logout").addEventListener("click", () => {
+          clearStoredAuth();
+          window.location.href = "/";
+        });
+
+        await loadDesktopBatches(true);
+      }
+
+      initPage();
+    </script>
+  </body>
+</html>

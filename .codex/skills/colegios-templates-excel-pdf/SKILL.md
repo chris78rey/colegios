@@ -64,9 +64,9 @@ Standardize DOCX/HTML template handling, Excel header generation from placeholde
 
 ### Files by Row (linking output to Excel row)
 - `GET /v1/batches/:id/requests-detail`
-  - Returns `items[]` with `{ index, row, request: { id, pdfUrl, docxUrl } }`
+  - Returns `items[]` with `{ index, row, request: { id, status, pdfUrl, docxUrl } }`
 - `GET /v1/batch-groups/:id/requests-detail`
-  - Returns `items[]` with `{ index, row, requests: [{ templateName, pdfUrl, docxUrl }] }`
+  - Returns `items[]` with `{ index, row, requests: [{ templateName, status, pdfUrl, docxUrl }] }`
 - `pdfUrl` / `docxUrl` are **relative** (`/v1/files?...`); UI must prefix with `apiBase`.
 
 ## UI Notes (Admin Colegio)
@@ -84,6 +84,11 @@ Standardize DOCX/HTML template handling, Excel header generation from placeholde
 - File list panel loads `requests-detail` and displays per-row links; **always prefix with `apiBase`**.
 - Render file links as **large buttons** (`Ver PDF`) to avoid tiny, hard-to-click anchors.
 - "Ver PDF" opens an **in-page modal** with an embedded viewer (`iframe`), not a new tab.
+- Preferred UX is now **estado del proceso**:
+  - preview is only for validation and row selection
+  - after submit, messaging should shift to `Proceso enviado`
+  - the final tab should open as soon as a batch exists; do not wait for `READY`
+  - show request-level status badges (`QUEUED`, `PROCESSING`, `READY`, `ERROR`)
 - Template name input: only used if user edits it; otherwise use filename (avoids duplicates).
 - The admin includes a dynamic **agnostic prompt generator** for HTML templates:
   - input: document type + extra context
@@ -94,3 +99,10 @@ Standardize DOCX/HTML template handling, Excel header generation from placeholde
 - Template selection is required for real batch processing; fixed example downloads must not depend on loaded templates.
 - When validating an uploaded Excel, disable processing if any selected-template placeholder is missing from headers.
 - Deactivation is allowed: `PATCH /v1/templates/:id` with `status=inactive` for templates in use.
+
+## Async Processing Pattern
+- New batches and requests should start in `QUEUED` when the UI says "proceso enviado".
+- Prefer API-side immediate dispatch right after batch creation; worker polling is fallback/recovery.
+- When processing completes, update each request with:
+  - `status: "READY"` and `pdfPath` if the file exists
+  - `status: "ERROR"` if generation failed

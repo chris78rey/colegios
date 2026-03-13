@@ -11,6 +11,9 @@ model Organization {
   id        String   @id @default(cuid())
   name      String
   status    String   @default("active")
+  billingModeDefault String @default("ORG_BALANCE")
+  billingAmountDefault Decimal @default(0) @db.Decimal(10, 2)
+  billingCurrency String @default("USD")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -20,6 +23,9 @@ model Organization {
   batches   Batch[]
   templateGroups TemplateGroup[]
   batchGroups BatchGroup[]
+  desktopBatches DesktopBatch[]
+  omniRequests OmniRequest[]
+  rcValidations RcValidation[]
   credits   OrgCredit?
 
   @@index([status])
@@ -51,6 +57,8 @@ model Template {
   signPage       Int
   placeholders   Json?
   requiredColumns Json?
+  billingModeOverride String?
+  billingAmountOverride Decimal? @db.Decimal(10, 2)
   status         String   @default("active")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -112,6 +120,7 @@ model Request {
   requestGroup RequestGroup? @relation(fields: [requestGroupId], references: [id])
   signatories  Signatory[]
   events       RequestEvent[]
+  omniDocuments OmniDocument[]
 
   @@index([organizationId, status])
   @@index([templateId])
@@ -173,6 +182,8 @@ model RequestGroup {
 
   batchGroup BatchGroup @relation(fields: [batchGroupId], references: [id])
   requests  Request[]
+  omniRequests OmniRequest[]
+  rcValidations RcValidation[]
 
   @@index([batchGroupId])
   @@index([status])
@@ -216,4 +227,165 @@ model OrgCredit {
   updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id])
+}
+
+model DesktopBatch {
+  id             String   @id @default(cuid())
+  organizationId String
+  sourceExcel    String
+  status         String   @default("IMPORTED")
+  rowCount       Int      @default(0)
+  documentCount  Int      @default(0)
+  uploadedByEmail String?
+  manifestJson   Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  documents    DesktopDocument[]
+  omniRequests OmniRequest[]
+  rcValidations RcValidation[]
+
+  @@index([organizationId, status])
+}
+
+model DesktopDocument {
+  id           String   @id @default(cuid())
+  batchId      String
+  rowIndex     Int
+  groupKey     String
+  templateName String
+  outputName   String
+  status       String   @default("READY")
+  pdfPath      String
+  rowJson      Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  batch DesktopBatch @relation(fields: [batchId], references: [id])
+  omniDocuments OmniDocument[]
+
+  @@index([batchId, rowIndex])
+  @@index([groupKey])
+  @@index([status])
+}
+
+model OmniRequest {
+  id                 String   @id @default(cuid())
+  organizationId     String
+  requestGroupId     String?
+  desktopBatchId     String?
+  provider           String   @default("OMNISWITCH")
+  providerRequestId  String?
+  status             String   @default("PENDING")
+  billingMode        String   @default("ORG_BALANCE")
+  billingAmount      Decimal  @default(0) @db.Decimal(10, 2)
+  billingCurrency    String   @default("USD")
+  paymentRequired    Boolean  @default(false)
+  paymentReference   String?
+  paymentStatus      String   @default("NOT_REQUIRED")
+  idProcess          Int?
+  documentCount      Int      @default(0)
+  signatoryCount     Int      @default(0)
+  sentAt             DateTime?
+  signedAt           DateTime?
+  lastPolledAt       DateTime?
+  lastProviderStatus String?
+  lastResultCode     Int?
+  lastResultText     String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  requestGroup RequestGroup? @relation(fields: [requestGroupId], references: [id])
+  desktopBatch DesktopBatch? @relation(fields: [desktopBatchId], references: [id])
+  documents    OmniDocument[]
+  events       OmniEvent[]
+  rcValidations RcValidation[]
+
+  @@index([organizationId, status])
+  @@index([providerRequestId])
+  @@index([requestGroupId])
+  @@index([desktopBatchId])
+}
+
+model OmniDocument {
+  id                   String   @id @default(cuid())
+  omniRequestId        String
+  requestId            String?
+  desktopDocumentId    String?
+  providerDocumentName String
+  localPdfPath         String?
+  signedPdfPath        String?
+  status               String   @default("PENDING")
+  pageCount            Int?
+  fileSizeBytes        Int?
+  providerSignedFlag   String?
+  downloadedAt         DateTime?
+  lastResultCode       Int?
+  lastResultText       String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  omniRequest     OmniRequest      @relation(fields: [omniRequestId], references: [id])
+  request         Request?         @relation(fields: [requestId], references: [id])
+  desktopDocument DesktopDocument? @relation(fields: [desktopDocumentId], references: [id])
+  events          OmniEvent[]
+
+  @@index([omniRequestId, status])
+  @@index([requestId])
+  @@index([desktopDocumentId])
+  @@unique([omniRequestId, providerDocumentName])
+}
+
+model OmniEvent {
+  id             String   @id @default(cuid())
+  omniRequestId   String
+  omniDocumentId  String?
+  type           String
+  message        String?
+  metaJson       Json?
+  createdAt      DateTime @default(now())
+
+  omniRequest  OmniRequest   @relation(fields: [omniRequestId], references: [id])
+  omniDocument OmniDocument? @relation(fields: [omniDocumentId], references: [id])
+
+  @@index([omniRequestId, createdAt])
+  @@index([omniDocumentId, createdAt])
+}
+
+model RcValidation {
+  id                    String   @id @default(cuid())
+  organizationId        String
+  desktopBatchId        String?
+  requestGroupId        String?
+  omniRequestId         String?
+  cedula                String
+  fullName              String?
+  phone                 String?
+  email                 String?
+  queryMode             String   @default("DEMOGRAPHIC")
+  status                String   @default("PENDING")
+  codigoDactilarProvided Boolean @default(false)
+  providerRequestId     String?
+  photoPath             String?
+  signatureGraphPath    String?
+  consentDocumentPath   String?
+  consentFileName       String?
+  lastResultCode        Int?
+  lastResultText        String?
+  validatedAt           DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  desktopBatch  DesktopBatch? @relation(fields: [desktopBatchId], references: [id])
+  requestGroup  RequestGroup? @relation(fields: [requestGroupId], references: [id])
+  omniRequest   OmniRequest? @relation(fields: [omniRequestId], references: [id])
+
+  @@index([organizationId, status])
+  @@index([desktopBatchId, status])
+  @@index([requestGroupId, status])
+  @@index([omniRequestId, status])
+  @@index([cedula, createdAt])
 }

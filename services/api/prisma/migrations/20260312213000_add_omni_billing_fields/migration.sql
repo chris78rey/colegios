@@ -1,0 +1,18 @@
+-- AlterTable
+ALTER TABLE "Organization"
+ADD COLUMN "billingAmountDefault" DECIMAL(10,2) NOT NULL DEFAULT 0,
+ADD COLUMN "billingCurrency" TEXT NOT NULL DEFAULT 'USD',
+ADD COLUMN "billingModeDefault" TEXT NOT NULL DEFAULT 'ORG_BALANCE';
+
+-- AlterTable
+ALTER TABLE "Template"
+ADD COLUMN "billingAmountOverride" DECIMAL(10,2),
+ADD COLUMN "billingModeOverride" TEXT;
+
+-- AlterTable
+ALTER TABLE "OmniRequest"
+ADD COLUMN "billingMode" TEXT NOT NULL DEFAULT 'ORG_BALANCE',
+ADD COLUMN "billingAmount" DECIMAL(10,2) NOT NULL DEFAULT 0,
+ADD COLUMN "billingCurrency" TEXT NOT NULL DEFAULT 'USD',
+ADD COLUMN "paymentRequired" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "paymentStatus" TEXT NOT NULL DEFAULT 'NOT_REQUIRED';

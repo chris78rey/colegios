@@ -42,8 +42,9 @@ Document the internal engine used to process up to 4 templates against one Excel
     - creates one `Request` per selected template per row
 - `POST /v1/batch-groups/:id/process`
 - `GET /v1/batch-groups?status=PENDING`
+- `GET /v1/batch-groups?status=QUEUED`
 - `GET /v1/batch-groups/:id/requests-detail`
-  - returns row-grouped files for the UI
+  - returns row-grouped files plus request `status` for the UI
 
 ## Disabled API Surface
 - `/v1/template-groups/...` should remain `410 feature_disabled` for product-facing usage.
@@ -61,7 +62,7 @@ Document the internal engine used to process up to 4 templates against one Excel
   - Plantillas
   - Excel y Validacion
   - Preview y Procesar
-  - Archivos
+  - Estado del proceso
 - Tabs are **gated by state** (template selected → Excel uploaded → batch created).
 - The user thinks in terms of **one Excel row = one record**, not in terms of persistent groups.
 
@@ -75,17 +76,23 @@ Document the internal engine used to process up to 4 templates against one Excel
 
 ## Worker Behavior
 - Polls both:
-  - `/v1/batches?status=PENDING` -> `/v1/batches/:id/process`
-  - `/v1/batch-groups?status=PENDING` -> `/v1/batch-groups/:id/process`
+  - `/v1/batches?status=QUEUED|PENDING` -> `/v1/batches/:id/process`
+  - `/v1/batch-groups?status=QUEUED|PENDING` -> `/v1/batch-groups/:id/process`
 - BatchGroup processing mirrors Batch and stores outputs grouped by row.
+- API should also auto-dispatch processing immediately after creation; worker polling remains a fallback.
 
 ## Constraints & Defaults
 - Max **4 templates** per batch.
 - Keep single-template flow working through the same `/v1/batches/start` endpoint.
 - Templates are scoped by `organizationId` (no cross-org mixing).
 - Temporary internal groups should be created with `status: "inactive"` so they do not behave like user-managed groups.
+- New `Batch`, `BatchGroup`, `Request`, and `RequestGroup` records should start in `QUEUED` when using the async UX.
 
 ## Validation/UX Notes
 - If any selected template is missing or inactive, reject the batch.
 - If any placeholder in the selected-template union is missing from Excel headers, reject the batch.
 - `requests-detail` for batch groups is the source of truth for rendering multiple PDFs under one row in the UI.
+- Propagate request/request-group states as work advances:
+  - `QUEUED` on creation
+  - `PROCESSING` when claimed
+  - `READY` or `ERROR` on completion

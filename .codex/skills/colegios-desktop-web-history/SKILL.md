@@ -31,16 +31,26 @@ Use this skill when the task touches the boundary between `desktop_app/`, `servi
 - Default state should emphasize the most recent batch:
   - `Mostrar solo el ultimo lote subido` enabled by default
   - selected batch synchronized with the current filtered result
-- The history view should behave like a document inbox:
+- The history view should behave like a compact inbox:
   - summary metrics
-  - batch list and filters
-  - selected batch detail
-  - inline PDF preview
+  - numeric batch list/table
+  - click on row/index opens detail in a modal
+  - keep the main page free of large embedded detail panes
+- If the user asks for a cleaner UI, prefer:
+  - modal detail for batch documents
+  - modal PDF preview on demand
+  - no fixed preview iframe in the base layout
 - Search inside the selected batch should include signer full name built from:
   - `PrimerNombre`
   - `SegunNombre`
   - `PrimerApellido`
   - `SegApellido`
+
+## Signing Boundary Rule
+- Do not keep signing controls mixed into `history.html`.
+- `history.html` is for consultation.
+- `signing.html` is for operation.
+- Preserve direct navigation from a batch detail to `signing.html?batchId=...`.
 
 ## Error Handling
 - If batch import fails, expose API detail in the desktop UI.

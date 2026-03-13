@@ -1,5 +1,6 @@
 // Minimal HTTP API skeleton for the MVP
 import http from "node:http";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { execFile } from "node:child_process";
@@ -13,6 +14,13 @@ const corsOrigin = process.env.CORS_ORIGIN || "*";
 const prisma = new PrismaClient();
 const storagePath = process.env.STORAGE_PATH || path.join(process.cwd(), "data", "storage");
 const examplesPath = path.join(process.cwd(), "plantillas", "ejemplos");
+const desktopWebTokenSecret = process.env.DESKTOP_WEB_TOKEN_SECRET || "desktop-web-token-dev-secret";
+const omniSwitchMode = String(process.env.OMNISWITCH_MODE || "mock").trim().toLowerCase();
+const omniSwitchProvider = "OMNISWITCH";
+const omniDefaultCountryId = Number(process.env.OMNISWITCH_DEFAULT_COUNTRY_ID || 19);
+const omniDefaultProvinceId = Number(process.env.OMNISWITCH_DEFAULT_PROVINCE_ID || 17);
+const omniDefaultCityId = Number(process.env.OMNISWITCH_DEFAULT_CITY_ID || 1701);
+const omniMockAutoSignMs = Math.max(0, Number(process.env.OMNISWITCH_MOCK_AUTO_SIGN_MS) || 0);
 
 function json(res, status, body) {
   res.writeHead(status, { "content-type": "application/json" });
@@ -272,6 +280,1014 @@ function contentTypeFor(filePath) {
   return "application/octet-stream";
 }
 
+function base64UrlEncode(value) {
+  return Buffer.from(value).toString("base64url");
+}
+
+function base64UrlDecode(value) {
+  return Buffer.from(value, "base64url").toString("utf-8");
+}
+
+function signDesktopWebToken(payload) {
+  const body = base64UrlEncode(JSON.stringify(payload));
+  const signature = crypto
+    .createHmac("sha256", desktopWebTokenSecret)
+    .update(body)
+    .digest("base64url");
+  return `${body}.${signature}`;
+}
+
+function verifyDesktopWebToken(token) {
+  const [body, signature] = String(token || "").split(".");
+  if (!body || !signature) return null;
+  const expectedSignature = crypto
+    .createHmac("sha256", desktopWebTokenSecret)
+    .update(body)
+    .digest("base64url");
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+    return null;
+  }
+  const payload = safeJsonParse(base64UrlDecode(body), null);
+  if (!payload || Number(payload.exp || 0) < Date.now()) {
+    return null;
+  }
+  return payload;
+}
+
+function defaultWebAppUrl(req) {
+  const configured = String(process.env.WEB_APP_URL || "").trim().replace(/\/$/, "");
+  if (configured) return configured;
+  const host = String(req.headers.host || "localhost:8080");
+  const [hostname] = host.split(":");
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    return "http://localhost:5173";
+  }
+  return `http://${hostname}`;
+}
+
+function safeJsonParse(value, fallback = null) {
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function parseIntSafe(value, fallback = null) {
+  const parsed = Number.parseInt(String(value ?? "").trim(), 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function basenameFromDocument(document) {
+  const candidate = document?.pdf_path || document?.pdfPath || document?.output_name || document?.outputName || "";
+  const rawValue = String(candidate || "").trim();
+  if (!rawValue) return "";
+  const normalized = rawValue.replace(/\\/g, "/");
+  return path.posix.basename(normalized);
+}
+
+function normalizeOmniFlag(value) {
+  return String(value || "").trim() === "1" ? "1" : "0";
+}
+
+function toDecimalString(value, fallback = "0.00") {
+  if (value === null || value === undefined || value === "") return fallback;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return numeric.toFixed(2);
+}
+
+function normalizeOmniPersonName(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+const OMNI_SIGNATURE_LAYOUT = {
+  pageWidth: 595,
+  pageHeight: 842,
+  minX: 36,
+  minY: 48,
+  maxY: 760,
+  baseY: 72,
+  stampWidth: 150,
+  stampHeight: 56,
+  horizontalGap: 24,
+};
+
+function parseOmniCoordinates(rawValue) {
+  const raw = String(rawValue || "").trim();
+  if (!raw) return null;
+  const match = raw.match(/^\s*(-?\d+)\s*,\s*(-?\d+)\s*$/);
+  if (!match) return null;
+  const x = Number.parseInt(match[1], 10);
+  const y = Number.parseInt(match[2], 10);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return {
+    x: clamp(x, OMNI_SIGNATURE_LAYOUT.minX, OMNI_SIGNATURE_LAYOUT.pageWidth - OMNI_SIGNATURE_LAYOUT.stampWidth),
+    y: clamp(y, OMNI_SIGNATURE_LAYOUT.minY, OMNI_SIGNATURE_LAYOUT.maxY),
+  };
+}
+
+function pickFirstRowValue(row, keys) {
+  if (!row || typeof row !== "object") return "";
+  for (const key of keys) {
+    const value = row[key];
+    if (value !== null && value !== undefined && String(value).trim() !== "") {
+      return value;
+    }
+  }
+  return "";
+}
+
+function resolveOmniSignaturePlacement(row, signatoryCount = 1) {
+  const manualPage = parseIntSafe(pickFirstRowValue(row, ["numeroPagina", "NumeroPagina", "signPage", "paginaFirma"]), null);
+  const manualCoordinates = parseOmniCoordinates(
+    pickFirstRowValue(row, ["Coordenadas", "coordenadas", "signatureCoordinates", "signCoordinates"])
+  );
+  if (manualCoordinates) {
+    return {
+      numeroPagina: manualPage !== null && manualPage > 0 ? manualPage : 1,
+      Coordenadas: `${manualCoordinates.x},${manualCoordinates.y}`,
+      autoCalculated: false,
+    };
+  }
+
+  const page = manualPage !== null && manualPage > 0 ? manualPage : 1;
+  const signerSlots = clamp(Number(signatoryCount) || 1, 1, 3);
+  const totalWidth =
+    signerSlots * OMNI_SIGNATURE_LAYOUT.stampWidth + Math.max(0, signerSlots - 1) * OMNI_SIGNATURE_LAYOUT.horizontalGap;
+  const centeredX = Math.round((OMNI_SIGNATURE_LAYOUT.pageWidth - totalWidth) / 2);
+  const x = clamp(
+    centeredX,
+    OMNI_SIGNATURE_LAYOUT.minX,
+    OMNI_SIGNATURE_LAYOUT.pageWidth - OMNI_SIGNATURE_LAYOUT.stampWidth
+  );
+  const y = clamp(OMNI_SIGNATURE_LAYOUT.baseY, OMNI_SIGNATURE_LAYOUT.minY, OMNI_SIGNATURE_LAYOUT.maxY);
+
+  return {
+    numeroPagina: page,
+    Coordenadas: `${x},${y}`,
+    autoCalculated: true,
+  };
+}
+
+function parseBooleanFlag(value, fallback = false) {
+  if (value === undefined || value === null || value === "") return fallback;
+  const normalized = String(value).trim().toLowerCase();
+  if (["1", "true", "yes", "si", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return fallback;
+}
+
+function normalizeComparisonText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+}
+
+function toTitleCase(value) {
+  return String(value || "")
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ")
+    .trim();
+}
+
+function splitPersonName(fullName) {
+  const parts = String(fullName || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!parts.length) return { names: "", lastNames: "" };
+  if (parts.length === 1) return { names: parts[0], lastNames: "" };
+  if (parts.length === 2) return { names: parts[0], lastNames: parts[1] };
+  return {
+    names: parts.slice(0, Math.max(1, parts.length - 2)).join(" "),
+    lastNames: parts.slice(-2).join(" "),
+  };
+}
+
+function combinePersonName(names, lastNames) {
+  return [String(names || "").trim(), String(lastNames || "").trim()].filter(Boolean).join(" ").trim();
+}
+
+function ensureRowLength(row, length) {
+  while (row.length < length) row.push("");
+}
+
+function findHeaderIndex(headers, candidates) {
+  const normalizedCandidates = candidates.map((candidate) => normalizeComparisonText(candidate));
+  return headers.findIndex((header) => normalizedCandidates.includes(normalizeComparisonText(header)));
+}
+
+function findHeaderIndexByIncludes(headers, fragments) {
+  const normalizedFragments = fragments.map((fragment) => normalizeComparisonText(fragment));
+  return headers.findIndex((header) => {
+    const normalizedHeader = normalizeComparisonText(header);
+    return normalizedFragments.some((fragment) => normalizedHeader.includes(fragment));
+  });
+}
+
+function detectRcColumns(headers) {
+  const standardCedulaIndex = findHeaderIndex(headers, ["Cedula"]);
+  const standardNamesIndex = findHeaderIndex(headers, ["PrimerNombre"]);
+  const standardMiddleNamesIndex = findHeaderIndex(headers, ["SegunNombre"]);
+  const standardLastNamesIndex = findHeaderIndex(headers, ["PrimerApellido"]);
+  const standardSecondLastNamesIndex = findHeaderIndex(headers, ["SegApellido"]);
+
+  const cedulaIndex = findHeaderIndex(headers, [
+    "Cedula",
+    "cedula",
+    "CedulaRepresentante",
+    "cedula_representante",
+    "identificacion",
+    "documento",
+    "persona1_cedula",
+    "persona_cedula",
+    "id_number",
+  ]);
+  const fullNameIndex = findHeaderIndex(headers, [
+    "NombreCompleto",
+    "nombre_completo",
+    "Nombre completo",
+    "fullName",
+    "AlumnoNombreCompleto",
+    "RepresentanteNombreCompleto",
+    "persona1_nombre_completo",
+    "persona_nombre_completo",
+  ]);
+  const namesIndex = findHeaderIndex(headers, [
+    "Nombres",
+    "nombres",
+    "PrimerNombre",
+    "PrimerosNombres",
+    "representante_nombre",
+    "AlumnoNombre",
+    "Nombre",
+    "persona1_nombre",
+    "persona_nombre",
+  ]);
+  const lastNamesIndex = findHeaderIndex(headers, [
+    "Apellidos",
+    "apellidos",
+    "PrimerApellido",
+    "representante_apellido",
+    "AlumnoApellido",
+    "persona1_apellido",
+    "persona_apellido",
+  ]);
+
+  const resolvedCedulaIndex =
+    cedulaIndex >= 0 ? cedulaIndex : findHeaderIndexByIncludes(headers, ["cedula", "documento", "identificacion", "id number"]);
+  const resolvedFullNameIndex =
+    fullNameIndex >= 0 ? fullNameIndex : findHeaderIndexByIncludes(headers, ["nombre completo", "full name"]);
+  const resolvedNamesIndex =
+    namesIndex >= 0 ? namesIndex : findHeaderIndexByIncludes(headers, ["_nombre", " nombres", "nombre"]);
+  const resolvedLastNamesIndex =
+    lastNamesIndex >= 0 ? lastNamesIndex : findHeaderIndexByIncludes(headers, ["_apellido", " apellidos", "apellido"]);
+
+  return {
+    cedulaIndex: resolvedCedulaIndex,
+    fullNameIndex: resolvedFullNameIndex,
+    namesIndex: resolvedNamesIndex,
+    lastNamesIndex: resolvedLastNamesIndex,
+    middleNamesIndex: standardMiddleNamesIndex,
+    secondLastNamesIndex: standardSecondLastNamesIndex,
+    usesStandardHeaders:
+      RC_STANDARD_HEADERS.every((header) => headers.includes(header)) &&
+      standardCedulaIndex >= 0 &&
+      standardNamesIndex >= 0 &&
+      standardLastNamesIndex >= 0,
+  };
+}
+
+function extractWorkbookRowsFromBuffer(buffer) {
+  const workbook = XLSX.read(buffer, { type: "buffer" });
+  const firstSheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[firstSheetName];
+  const matrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+  const headers = (matrix[0] || []).map((value) => String(value || "").trim());
+  const rows = matrix.slice(1).map((row) => row.map((value) => (value === null || value === undefined ? "" : String(value).trim())));
+  return { workbook, firstSheetName, matrix, headers, rows };
+}
+
+function simulateOfficialIdentity(cedula, providedFullName = "") {
+  const digits = String(cedula || "").replace(/\D/g, "");
+  const lastDigit = Number(digits.slice(-1) || 0);
+  const cleanedName = toTitleCase(providedFullName);
+  const fallbackNames = ["Maria Jose", "Carlos Andres", "Ana Sofia", "Jonathan", "Luis Felipe", "Camila"];
+  const fallbackLastNames = ["Paredes Lopez", "Menendez Ruiz", "Solis Villacis", "Ponce Vera", "Rosero Diaz", "Mendoza Arias"];
+  const fallbackFullName = combinePersonName(
+    fallbackNames[Number(digits.slice(-2, -1) || 0) % fallbackNames.length],
+    fallbackLastNames[lastDigit % fallbackLastNames.length]
+  );
+
+  if (!digits || digits.length < 6) {
+    return {
+      status: "ERROR",
+      officialFullName: "",
+      observation: "La fuente externa rechazo la consulta por cedula incompleta.",
+    };
+  }
+
+  if (lastDigit === 9) {
+    return {
+      status: "ERROR",
+      officialFullName: "",
+      observation: "La fuente externa no respondio para esta cedula.",
+    };
+  }
+
+  if (lastDigit === 8) {
+    return {
+      status: "REVIEW",
+      officialFullName: fallbackFullName,
+      observation: "La fuente externa devolvio un nombre que requiere revision manual.",
+    };
+  }
+
+  if (lastDigit >= 5 && lastDigit <= 7) {
+    const baseName = cleanedName || fallbackFullName;
+    const split = splitPersonName(baseName);
+    const adjustedLastNames = split.lastNames
+      ? split.lastNames.replace(/\bS\b/i, "Z").replace(/\bS$/, "Z") || split.lastNames
+      : fallbackLastNames[lastDigit % fallbackLastNames.length];
+    return {
+      status: "CORRECTABLE",
+      officialFullName: combinePersonName(split.names || baseName, adjustedLastNames),
+      observation: "La fuente externa encontro una variante corregible en nombres o apellidos.",
+    };
+  }
+
+  return {
+    status: "MATCH",
+    officialFullName: cleanedName || fallbackFullName,
+    observation: "La fuente externa devolvio datos consistentes con el Excel.",
+  };
+}
+
+function compareRcResult({ inputFullName, officialFullName, compareNames, compareLastNames, providerStatus }) {
+  if (providerStatus === "ERROR") return { status: "ERROR", observation: "No fue posible validar esta cedula." };
+  if (providerStatus === "REVIEW") return { status: "REVIEW", observation: "Requiere revision manual antes de corregir." };
+
+  const inputSplit = splitPersonName(inputFullName);
+  const officialSplit = splitPersonName(officialFullName);
+  const namesMatch =
+    !compareNames ||
+    !officialSplit.names ||
+    normalizeComparisonText(inputSplit.names) === normalizeComparisonText(officialSplit.names);
+  const lastNamesMatch =
+    !compareLastNames ||
+    !officialSplit.lastNames ||
+    normalizeComparisonText(inputSplit.lastNames) === normalizeComparisonText(officialSplit.lastNames);
+
+  if (namesMatch && lastNamesMatch) {
+    return { status: "MATCH", observation: "Los datos coinciden con la fuente externa." };
+  }
+
+  const inputFull = normalizeComparisonText(inputFullName);
+  const officialFull = normalizeComparisonText(officialFullName);
+  const similarityHint =
+    inputFull &&
+    officialFull &&
+    (officialFull.includes(inputFull) || inputFull.includes(officialFull) || namesMatch || lastNamesMatch);
+  if (similarityHint) {
+    return { status: "CORRECTABLE", observation: "Se detectaron diferencias corregibles en el nombre oficial." };
+  }
+  return { status: "REVIEW", observation: "La cedula existe pero el nombre amerita revision manual." };
+}
+
+function isValidEmail(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
+}
+
+function validateOmniSwitchRow(rowMap) {
+  const issues = [];
+  const phone = sanitizePhone(rowMap.Celular || rowMap.celular || rowMap.phone || "");
+  const email = String(rowMap.Email || rowMap.email || rowMap.Correo || rowMap.correo || "").trim();
+  const address = String(rowMap.Direccion || rowMap.direccion || "").trim();
+  const firmaPrincipal = String(rowMap.FirmaPrincipal || rowMap.firmaPrincipal || "").trim();
+  const idPais = parseIntSafe(rowMap.IdPais, omniDefaultCountryId);
+  const idProvincia = parseIntSafe(rowMap.IdProvincia, omniDefaultProvinceId);
+  const idCiudad = parseIntSafe(rowMap.IdCiudad, omniDefaultCityId);
+
+  if (!phone) {
+    issues.push("Falta Celular.");
+  } else if (phone.length < 10) {
+    issues.push("Celular incompleto para OmniSwitch.");
+  }
+
+  if (!email) {
+    issues.push("Falta Email.");
+  } else if (!isValidEmail(email)) {
+    issues.push("Email invalido para OmniSwitch.");
+  }
+
+  if (!address) {
+    issues.push("Falta Direccion.");
+  }
+
+  if (firmaPrincipal && !["1", "0", "true", "false", "si", "no"].includes(firmaPrincipal.toLowerCase())) {
+    issues.push("FirmaPrincipal tiene un formato no reconocido.");
+  }
+
+  if (!Number.isFinite(idPais) || idPais <= 0) issues.push("IdPais invalido.");
+  if (!Number.isFinite(idProvincia) || idProvincia <= 0) issues.push("IdProvincia invalido.");
+  if (!Number.isFinite(idCiudad) || idCiudad <= 0) issues.push("IdCiudad invalido.");
+
+  return {
+    ready: issues.length === 0,
+    issues,
+    normalized: {
+      phone,
+      email,
+      address,
+      firmaPrincipal: firmaPrincipal || "1",
+      idPais: Number.isFinite(idPais) && idPais > 0 ? idPais : omniDefaultCountryId,
+      idProvincia: Number.isFinite(idProvincia) && idProvincia > 0 ? idProvincia : omniDefaultProvinceId,
+      idCiudad: Number.isFinite(idCiudad) && idCiudad > 0 ? idCiudad : omniDefaultCityId,
+    },
+  };
+}
+
+function buildRcValidationRun({ workbookBuffer, filename, options = {} }) {
+  const { workbook, firstSheetName, matrix, headers, rows } = extractWorkbookRowsFromBuffer(workbookBuffer);
+  const columns = detectRcColumns(headers);
+  if (columns.cedulaIndex === -1) {
+    throw new Error("El Excel no tiene una columna de cedula reconocible.");
+  }
+
+  const compareNames = options.compareNames !== false;
+  const compareLastNames = options.compareLastNames !== false;
+  const createCorrectedCopy = options.createCorrectedCopy !== false;
+  const results = [];
+  let processedCount = 0;
+  let matchCount = 0;
+  let correctableCount = 0;
+  let reviewCount = 0;
+  let errorCount = 0;
+
+  const correctedMatrix = matrix.map((row) => [...row]);
+  const correctedHeaders = correctedMatrix[0] ? [...correctedMatrix[0]] : [...headers];
+  if (!correctedMatrix[0]) correctedMatrix[0] = correctedHeaders;
+
+  const auditColumnNames = [
+    "nombre_completo_original",
+    "nombre_completo_validado",
+    "estado_validacion",
+    "observacion_validacion",
+  ];
+  const auditIndexes = {};
+  for (const auditName of auditColumnNames) {
+    let index = findHeaderIndex(correctedHeaders, [auditName]);
+    if (index === -1) {
+      index = correctedHeaders.length;
+      correctedHeaders.push(auditName);
+      correctedMatrix[0].push(auditName);
+    }
+    auditIndexes[auditName] = index;
+  }
+
+  rows.forEach((row, rowOffset) => {
+    const excelRowNumber = rowOffset + 2;
+    const sourceRow = correctedMatrix[excelRowNumber] || [];
+    ensureRowLength(sourceRow, correctedHeaders.length);
+    correctedMatrix[excelRowNumber] = sourceRow;
+    const rowMap = {};
+    headers.forEach((header, index) => {
+      rowMap[header] = row[index] ?? "";
+    });
+
+    const cedula = String(row[columns.cedulaIndex] || "").trim();
+    const inputNames = [
+      columns.namesIndex >= 0 ? String(row[columns.namesIndex] || "").trim() : "",
+      columns.middleNamesIndex >= 0 ? String(row[columns.middleNamesIndex] || "").trim() : "",
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    const inputLastNames = [
+      columns.lastNamesIndex >= 0 ? String(row[columns.lastNamesIndex] || "").trim() : "",
+      columns.secondLastNamesIndex >= 0 ? String(row[columns.secondLastNamesIndex] || "").trim() : "",
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    const inputFullName =
+      (columns.fullNameIndex >= 0 ? String(row[columns.fullNameIndex] || "").trim() : "") ||
+      combinePersonName(inputNames, inputLastNames);
+
+    if (!cedula) return;
+
+    processedCount += 1;
+    const providerResult = simulateOfficialIdentity(cedula, inputFullName);
+    const comparison = compareRcResult({
+      inputFullName,
+      officialFullName: providerResult.officialFullName,
+      compareNames,
+      compareLastNames,
+      providerStatus: providerResult.status,
+    });
+    const omniCheck = validateOmniSwitchRow(rowMap);
+
+    if (comparison.status === "MATCH") matchCount += 1;
+    if (comparison.status === "CORRECTABLE") correctableCount += 1;
+    if (comparison.status === "REVIEW") reviewCount += 1;
+    if (comparison.status === "ERROR") errorCount += 1;
+
+    const officialSplit = splitPersonName(providerResult.officialFullName);
+    const omniSuffix = omniCheck.ready
+      ? " OmniSwitch listo."
+      : ` OmniSwitch pendiente: ${omniCheck.issues.join(" ")}`;
+    const actionLabel =
+      comparison.status === "CORRECTABLE" && createCorrectedCopy
+        ? `Se actualizara en la copia validada.${omniSuffix}`
+        : comparison.status === "MATCH"
+          ? `Sin cambios.${omniSuffix}`
+          : comparison.status === "REVIEW"
+            ? `Requiere revision manual.${omniSuffix}`
+            : `No se pudo corregir automaticamente.${omniSuffix}`;
+    const combinedObservation = [comparison.observation, omniCheck.ready ? "" : omniCheck.issues.join(" ")]
+      .filter(Boolean)
+      .join(" ");
+
+    sourceRow[auditIndexes.nombre_completo_original] = inputFullName;
+    sourceRow[auditIndexes.nombre_completo_validado] = providerResult.officialFullName;
+    sourceRow[auditIndexes.estado_validacion] = comparison.status;
+    sourceRow[auditIndexes.observacion_validacion] = combinedObservation;
+
+    if (comparison.status === "CORRECTABLE" && createCorrectedCopy) {
+      if (columns.fullNameIndex >= 0) {
+        ensureRowLength(sourceRow, columns.fullNameIndex + 1);
+        sourceRow[columns.fullNameIndex] = providerResult.officialFullName;
+      }
+      if (columns.namesIndex >= 0) {
+        ensureRowLength(sourceRow, columns.namesIndex + 1);
+        const officialNamesParts = String(officialSplit.names || "").split(/\s+/).filter(Boolean);
+        sourceRow[columns.namesIndex] = officialNamesParts[0] || officialSplit.names;
+        if (columns.middleNamesIndex >= 0) {
+          ensureRowLength(sourceRow, columns.middleNamesIndex + 1);
+          sourceRow[columns.middleNamesIndex] = officialNamesParts.slice(1).join(" ");
+        }
+      }
+      if (columns.lastNamesIndex >= 0) {
+        ensureRowLength(sourceRow, columns.lastNamesIndex + 1);
+        const officialLastNameParts = String(officialSplit.lastNames || "").split(/\s+/).filter(Boolean);
+        sourceRow[columns.lastNamesIndex] = officialLastNameParts[0] || officialSplit.lastNames;
+        if (columns.secondLastNamesIndex >= 0) {
+          ensureRowLength(sourceRow, columns.secondLastNamesIndex + 1);
+          sourceRow[columns.secondLastNamesIndex] = officialLastNameParts.slice(1).join(" ");
+        }
+      }
+    }
+
+    results.push({
+      rowIndex: rowOffset + 1,
+      excelRowNumber,
+      cedula,
+      inputFullName,
+      officialFullName: providerResult.officialFullName,
+      status: comparison.status,
+      observation: combinedObservation,
+      actionLabel,
+      omniReady: omniCheck.ready,
+      omniIssues: omniCheck.issues,
+    });
+  });
+
+  const correctedSheet = XLSX.utils.aoa_to_sheet(correctedMatrix);
+  correctedSheet["!cols"] = correctedHeaders.map((header) => ({ wch: Math.max(String(header || "").length + 4, 18) }));
+  workbook.Sheets[firstSheetName] = correctedSheet;
+  const correctedBuffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+  return {
+    sourceFileName: filename,
+    results,
+    correctedBuffer,
+    summary: {
+      totalRows: rows.length,
+      processedCount,
+      matchCount,
+      correctableCount,
+      reviewCount,
+      errorCount,
+    },
+    detectedColumns: {
+      cedula: columns.cedulaIndex >= 0 ? headers[columns.cedulaIndex] : "",
+      fullName: columns.fullNameIndex >= 0 ? headers[columns.fullNameIndex] : "",
+      names: columns.namesIndex >= 0 ? headers[columns.namesIndex] : "",
+      lastNames: columns.lastNamesIndex >= 0 ? headers[columns.lastNamesIndex] : "",
+      standardMode: columns.usesStandardHeaders,
+    },
+  };
+}
+
+function serializeOmniDocument(document, signatoryCount = 1) {
+  const placement = resolveOmniSignaturePlacement(document?.desktopDocument?.rowJson || document?.rowJson || {}, signatoryCount);
+  const { desktopDocument, rowJson, ...safeDocument } = document || {};
+  return {
+    ...safeDocument,
+    numeroPagina: placement.numeroPagina,
+    Coordenadas: placement.Coordenadas,
+    signaturePlacementAuto: placement.autoCalculated,
+    signedPdfUrl: toFileUrl(document.signedPdfPath),
+    localPdfUrl: toFileUrl(document.localPdfPath),
+  };
+}
+
+function getOmniProcessId(overrideValue = null) {
+  const overridden = parseIntSafe(overrideValue, null);
+  if (overridden !== null) return overridden;
+  return Number(process.env.OMNISWITCH_DEFAULT_ID_PROCESS || 10);
+}
+
+function getMockSignedFilePath(organizationId, omniRequestId, providerDocumentName) {
+  const safeName = path.basename(String(providerDocumentName || "documento.pdf"));
+  return path.join(storagePath, "omniswitch", organizationId, omniRequestId, safeName);
+}
+
+async function createOmniEvent(omniRequestId, type, { omniDocumentId = null, message = "", metaJson = null } = {}) {
+  return prisma.omniEvent.create({
+    data: {
+      omniRequestId,
+      omniDocumentId: omniDocumentId || undefined,
+      type,
+      message: message || null,
+      metaJson: metaJson || undefined,
+    },
+  });
+}
+
+async function resolveOmniBillingForDocuments(organizationId, documents, overrides = {}) {
+  const organization = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: {
+      billingModeDefault: true,
+      billingAmountDefault: true,
+      billingCurrency: true,
+    },
+  });
+  if (!organization) {
+    throw new Error("organization_not_found");
+  }
+  const templateNames = Array.from(
+    new Set(
+      (documents || [])
+        .map((document) => String(document?.templateName || "").trim())
+        .filter(Boolean)
+    )
+  );
+  const templates = templateNames.length
+    ? await prisma.template.findMany({
+        where: {
+          organizationId,
+          name: { in: templateNames },
+          status: "active",
+        },
+        select: {
+          id: true,
+          name: true,
+          billingModeOverride: true,
+          billingAmountOverride: true,
+        },
+      })
+    : [];
+  const overrideTemplate = templates.find((template) => template.billingModeOverride || template.billingAmountOverride !== null);
+  const billingMode = String(
+    overrides.billingMode || overrideTemplate?.billingModeOverride || organization.billingModeDefault || "ORG_BALANCE"
+  ).trim().toUpperCase();
+  const billingAmount = toDecimalString(
+    overrides.billingAmount ?? overrideTemplate?.billingAmountOverride ?? organization.billingAmountDefault ?? 0
+  );
+  const billingCurrency = String(overrides.billingCurrency || organization.billingCurrency || "USD").trim().toUpperCase() || "USD";
+  const paymentRequired = billingMode === "SIGNER_PAYS" && Number(billingAmount) > 0;
+  const paymentReference = paymentRequired ? String(overrides.paymentReference || "").trim() : "";
+  if (paymentRequired && !paymentReference) {
+    return { error: "missing_payment_reference" };
+  }
+  return {
+    billingMode,
+    billingAmount,
+    billingCurrency,
+    paymentRequired,
+    paymentReference,
+    paymentStatus: paymentRequired ? "PENDING" : "NOT_REQUIRED",
+    sourceTemplateId: overrideTemplate?.id || null,
+    sourceTemplateName: overrideTemplate?.name || null,
+  };
+}
+
+async function getOmniRequestDetail(omniRequestId) {
+  return prisma.omniRequest.findUnique({
+    where: { id: omniRequestId },
+    include: {
+      documents: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          desktopDocument: {
+            select: {
+              rowJson: true,
+            },
+          },
+        },
+      },
+      events: { orderBy: { createdAt: "asc" } },
+    },
+  });
+}
+
+async function syncOmniRequestStatus(omniRequestId) {
+  const omniRequest = await prisma.omniRequest.findUnique({
+    where: { id: omniRequestId },
+    include: { documents: true },
+  });
+  if (!omniRequest) return null;
+  const docs = omniRequest.documents || [];
+  const hasError = docs.some((doc) => doc.status === "ERROR");
+  const allSigned = docs.length > 0 && docs.every((doc) => normalizeOmniFlag(doc.providerSignedFlag) === "1");
+  const anySigned = docs.some((doc) => normalizeOmniFlag(doc.providerSignedFlag) === "1");
+  const nextStatus = hasError
+    ? "ERROR"
+    : allSigned
+      ? "SIGNED"
+      : anySigned
+        ? "PARTIALLY_SIGNED"
+        : omniRequest.status === "SENT"
+          ? "SENT"
+          : omniRequest.status;
+  const updated = await prisma.omniRequest.update({
+    where: { id: omniRequestId },
+    data: {
+      status: nextStatus,
+      signedAt: allSigned ? new Date() : null,
+      lastProviderStatus: nextStatus,
+      lastPolledAt: new Date(),
+    },
+  });
+  return updated;
+}
+
+async function getOmniRequestResponseItem(omniRequestId) {
+  const item = await getOmniRequestDetail(omniRequestId);
+  if (!item) return null;
+  return {
+    ...item,
+    documents: item.documents.map((document) => serializeOmniDocument(document, item.signatoryCount)),
+  };
+}
+
+async function mockDownloadOmniDocument(omniDocument) {
+  const omniRequest = await prisma.omniRequest.findUnique({ where: { id: omniDocument.omniRequestId } });
+  if (!omniRequest) throw new Error("omni_request_not_found");
+  if (normalizeOmniFlag(omniDocument.providerSignedFlag) !== "1") {
+    throw new Error("document_not_signed");
+  }
+  if (!omniDocument.localPdfPath || !fs.existsSync(omniDocument.localPdfPath)) {
+    throw new Error("local_pdf_missing");
+  }
+  const signedPath = getMockSignedFilePath(
+    omniRequest.organizationId,
+    omniRequest.id,
+    omniDocument.providerDocumentName
+  );
+  ensureDir(path.dirname(signedPath));
+  fs.copyFileSync(omniDocument.localPdfPath, signedPath);
+  const updated = await prisma.omniDocument.update({
+    where: { id: omniDocument.id },
+    data: {
+      signedPdfPath: signedPath,
+      downloadedAt: new Date(),
+      status: "DOWNLOADED",
+      lastResultCode: 0,
+      lastResultText: "Operacion correcta",
+    },
+  });
+  await createOmniEvent(omniRequest.id, "DOWNLOAD_OK", {
+    omniDocumentId: omniDocument.id,
+    message: "Mock signed document downloaded",
+    metaJson: { providerDocumentName: omniDocument.providerDocumentName, signedPdfPath: signedPath },
+  });
+  return updated;
+}
+
+async function mockSignOmniDocuments(omniRequestId, targetDocumentId = "") {
+  const omniRequest = await prisma.omniRequest.findUnique({
+    where: { id: omniRequestId },
+    include: { documents: true },
+  });
+  if (!omniRequest) {
+    return { error: "omni_request_not_found", status: 404 };
+  }
+  const targets = (omniRequest.documents || []).filter((document) => !targetDocumentId || document.id === targetDocumentId);
+  if (!targets.length) {
+    return { error: "omni_document_not_found", status: 404 };
+  }
+
+  for (const document of targets) {
+    const updatedDocument = await prisma.omniDocument.update({
+      where: { id: document.id },
+      data: {
+        providerSignedFlag: "1",
+        status: "SIGNED",
+        lastResultCode: 0,
+        lastResultText: "Operacion correcta",
+      },
+    });
+    await createOmniEvent(omniRequest.id, "MOCK_SIGN_OK", {
+      omniDocumentId: document.id,
+      message: "Mock signature completed",
+      metaJson: { providerDocumentName: document.providerDocumentName },
+    });
+    await mockDownloadOmniDocument(updatedDocument);
+  }
+
+  await syncOmniRequestStatus(omniRequestId);
+  const item = await getOmniRequestResponseItem(omniRequestId);
+  return { item, status: 200 };
+}
+
+async function processMockOmniRequest(omniRequestId) {
+  const omniRequest = await prisma.omniRequest.findUnique({
+    where: { id: omniRequestId },
+    include: { documents: true },
+  });
+  if (!omniRequest) return null;
+  const now = Date.now();
+  for (const document of omniRequest.documents || []) {
+    const ageMs = now - new Date(document.createdAt).getTime();
+    if (normalizeOmniFlag(document.providerSignedFlag) === "0" && omniMockAutoSignMs > 0 && ageMs >= omniMockAutoSignMs) {
+      await prisma.omniDocument.update({
+        where: { id: document.id },
+        data: {
+          providerSignedFlag: "1",
+          status: "SIGNED",
+          lastResultCode: 0,
+          lastResultText: "Operacion correcta",
+        },
+      });
+      await createOmniEvent(omniRequest.id, "POLL_SIGNED", {
+        omniDocumentId: document.id,
+        message: "Mock document signed",
+        metaJson: { providerDocumentName: document.providerDocumentName },
+      });
+    }
+  }
+  const refreshed = await prisma.omniRequest.findUnique({
+    where: { id: omniRequestId },
+    include: { documents: true },
+  });
+  if (!refreshed) return null;
+  for (const document of refreshed.documents || []) {
+    if (normalizeOmniFlag(document.providerSignedFlag) === "1" && !document.signedPdfPath) {
+      await mockDownloadOmniDocument(document);
+    }
+  }
+  return syncOmniRequestStatus(omniRequestId);
+}
+
+async function createMockOmniRequestsForDesktopBatch(batchId, options = {}) {
+  const desktopBatch = await prisma.desktopBatch.findUnique({
+    where: { id: batchId },
+    include: { documents: { orderBy: [{ rowIndex: "asc" }, { createdAt: "asc" }] } },
+  });
+  if (!desktopBatch) {
+    return { error: "batch_not_found", status: 404 };
+  }
+  const readyDocuments = (desktopBatch.documents || []).filter((doc) => doc.status === "READY" && doc.pdfPath);
+  if (!readyDocuments.length) {
+    return { error: "no_ready_documents", status: 400 };
+  }
+  const grouped = new Map();
+  for (const document of readyDocuments) {
+    const groupKey = `${document.rowIndex}::${document.groupKey || ""}`;
+    if (!grouped.has(groupKey)) grouped.set(groupKey, []);
+    grouped.get(groupKey).push(document);
+  }
+
+  const created = [];
+  for (const documents of grouped.values()) {
+    const firstDoc = documents[0];
+    const existing = await prisma.omniRequest.findFirst({
+      where: {
+        desktopBatchId: desktopBatch.id,
+        requestGroupId: null,
+        documents: {
+          some: {
+            desktopDocumentId: firstDoc.id,
+          },
+        },
+      },
+    });
+    if (existing) {
+      if (!options.forceResend) {
+        return {
+          error: "already_sent",
+          status: 409,
+          existingRequestId: existing.id,
+          existingProviderRequestId: existing.providerRequestId || null,
+        };
+      }
+    }
+
+    const providerRequestId = String(Date.now()) + String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+    const signatories = buildSignatoriesForTemplate(OMNISWITCH_FIELDS, firstDoc.rowJson || {});
+    const billing = await resolveOmniBillingForDocuments(desktopBatch.organizationId, documents, options);
+    if (billing?.error) {
+      return { error: billing.error, status: 400 };
+    }
+    const omniRequest = await prisma.omniRequest.create({
+      data: {
+        organizationId: desktopBatch.organizationId,
+        desktopBatchId: desktopBatch.id,
+        provider: omniSwitchProvider,
+        providerRequestId,
+        status: "SENT",
+        billingMode: billing.billingMode,
+        billingAmount: billing.billingAmount,
+        billingCurrency: billing.billingCurrency,
+        paymentRequired: billing.paymentRequired,
+        paymentReference: billing.paymentReference || null,
+        paymentStatus: billing.paymentStatus,
+        idProcess: getOmniProcessId(options.idProcess),
+        documentCount: documents.length,
+        signatoryCount: signatories.length,
+        sentAt: new Date(),
+        lastPolledAt: new Date(),
+        lastProviderStatus: "SENT",
+        lastResultCode: 0,
+        lastResultText: "Operacion correcta",
+      },
+    });
+
+    for (const document of documents) {
+      const placement = resolveOmniSignaturePlacement(document.rowJson || {}, signatories.length);
+      const createdDocument = await prisma.omniDocument.create({
+        data: {
+          omniRequestId: omniRequest.id,
+          desktopDocumentId: document.id,
+          providerDocumentName: path.basename(document.outputName || path.basename(document.pdfPath)),
+          localPdfPath: document.pdfPath,
+          status: "UPLOADED",
+          providerSignedFlag: "0",
+          fileSizeBytes: fs.existsSync(document.pdfPath) ? fs.statSync(document.pdfPath).size : null,
+          lastResultCode: 0,
+          lastResultText: "Operacion correcta",
+        },
+      });
+      await createOmniEvent(omniRequest.id, "DOC_UPLOAD_OK", {
+        omniDocumentId: createdDocument.id,
+        message: "Mock OmniSwitch document uploaded",
+        metaJson: {
+          providerDocumentName: createdDocument.providerDocumentName,
+          numeroPagina: placement.numeroPagina,
+          Coordenadas: placement.Coordenadas,
+          autoCalculated: placement.autoCalculated,
+        },
+      });
+    }
+
+    await createOmniEvent(omniRequest.id, "CREATE_REQUEST_OK", {
+      message: "Mock OmniSwitch request created",
+      metaJson: {
+        providerRequestId,
+        billing,
+        forceResend: !!options.forceResend,
+        signatories: signatories.map((signatory) => ({
+          idNumber: signatory.idNumber,
+          fullName: normalizeOmniPersonName(signatory.fullName),
+          email: signatory.email,
+          phone: signatory.phone,
+          isPrimary: signatory.isPrimary,
+          providerCountryId: parseIntSafe(firstDoc.rowJson?.IdPais, omniDefaultCountryId),
+          providerProvinceId: parseIntSafe(firstDoc.rowJson?.IdProvincia, omniDefaultProvinceId),
+          providerCityId: parseIntSafe(firstDoc.rowJson?.IdCiudad, omniDefaultCityId),
+        })),
+        documentPlacements: documents.map((document) => ({
+          providerDocumentName: path.basename(document.outputName || path.basename(document.pdfPath)),
+          ...resolveOmniSignaturePlacement(document.rowJson || {}, signatories.length),
+        })),
+      },
+    });
+    await createOmniEvent(omniRequest.id, "SEND_OK", {
+      message: "Mock OmniSwitch request sent",
+      metaJson: { providerRequestId },
+    });
+    created.push(omniRequest);
+  }
+  return { items: created, status: 201 };
+}
+
 function sanitizePhone(value) {
   return String(value || "").replace(/[^0-9]+/g, "");
 }
@@ -297,6 +1313,21 @@ const OMNISWITCH_REQUIRED_FIELDS = [
   "PrimerApellido",
   "Celular",
   "Email",
+  "Direccion",
+];
+
+const RC_STANDARD_HEADERS = [
+  "Cedula",
+  "PrimerNombre",
+  "SegunNombre",
+  "PrimerApellido",
+  "SegApellido",
+  "Celular",
+  "Email",
+  "FirmaPrincipal",
+  "IdPais",
+  "IdProvincia",
+  "IdCiudad",
   "Direccion",
 ];
 
@@ -589,15 +1620,15 @@ function buildSignatoriesForTemplate(placeholders, row) {
 async function processBatch(batchId) {
   const batch = await prisma.batch.findUnique({ where: { id: batchId } });
   if (!batch) return;
-  if (batch.status === "PROCESSING") return;
-
-  await prisma.batch.update({
-    where: { id: batch.id },
+  const claim = await prisma.batch.updateMany({
+    where: { id: batch.id, status: { in: ["PENDING", "QUEUED"] } },
     data: { status: "PROCESSING" },
   });
+  if (!claim.count) return;
 
   const template = await prisma.template.findUnique({ where: { id: batch.templateId } });
   if (!template) {
+    await prisma.request.updateMany({ where: { batchId: batch.id }, data: { status: "ERROR" } });
     await prisma.batch.update({ where: { id: batch.id }, data: { status: "ERROR" } });
     return;
   }
@@ -605,6 +1636,7 @@ async function processBatch(batchId) {
   const batchDir = path.join(storagePath, "batches", batch.organizationId, batch.id);
   const inputPath = path.join(batchDir, "input.json");
   if (!fs.existsSync(inputPath)) {
+    await prisma.request.updateMany({ where: { batchId: batch.id }, data: { status: "ERROR" } });
     await prisma.batch.update({ where: { id: batch.id }, data: { status: "ERROR" } });
     return;
   }
@@ -613,6 +1645,10 @@ async function processBatch(batchId) {
   const requests = await prisma.request.findMany({
     where: { batchId: batch.id },
     orderBy: { createdAt: "asc" },
+  });
+  await prisma.request.updateMany({
+    where: { batchId: batch.id, status: { in: ["PENDING", "QUEUED"] } },
+    data: { status: "PROCESSING" },
   });
 
   const docxDir = path.join(batchDir, "docx");
@@ -704,12 +1740,10 @@ async function processBatch(batchId) {
     const optimizedPath = path.join(optimizedDir, `${request.id}.pdf`);
     const pdfPath = path.join(pdfDir, `${request.id}.pdf`);
     const finalPath = fs.existsSync(optimizedPath) ? optimizedPath : fs.existsSync(pdfPath) ? pdfPath : null;
-    if (finalPath) {
-      await prisma.request.update({
-        where: { id: request.id },
-        data: { pdfPath: finalPath },
-      });
-      }
+    await prisma.request.update({
+      where: { id: request.id },
+      data: finalPath ? { pdfPath: finalPath, status: "READY" } : { status: "ERROR" },
+    });
   }
 
   await prisma.batch.update({
@@ -730,15 +1764,16 @@ async function processBatchGroup(batchGroupId) {
     },
   });
   if (!batchGroup) return;
-  if (batchGroup.status === "PROCESSING") return;
-
-  await prisma.batchGroup.update({
-    where: { id: batchGroup.id },
+  const claim = await prisma.batchGroup.updateMany({
+    where: { id: batchGroup.id, status: { in: ["PENDING", "QUEUED"] } },
     data: { status: "PROCESSING" },
   });
+  if (!claim.count) return;
 
   const items = batchGroup.group?.items || [];
   if (!items.length) {
+    await prisma.requestGroup.updateMany({ where: { batchGroupId: batchGroup.id }, data: { status: "ERROR" } });
+    await prisma.request.updateMany({ where: { requestGroup: { batchGroupId: batchGroup.id } }, data: { status: "ERROR" } });
     await prisma.batchGroup.update({ where: { id: batchGroup.id }, data: { status: "ERROR" } });
     return;
   }
@@ -746,6 +1781,8 @@ async function processBatchGroup(batchGroupId) {
   const batchDir = path.join(storagePath, "batch-groups", batchGroup.organizationId, batchGroup.id);
   const inputPath = path.join(batchDir, "input.json");
   if (!fs.existsSync(inputPath)) {
+    await prisma.requestGroup.updateMany({ where: { batchGroupId: batchGroup.id }, data: { status: "ERROR" } });
+    await prisma.request.updateMany({ where: { requestGroup: { batchGroupId: batchGroup.id } }, data: { status: "ERROR" } });
     await prisma.batchGroup.update({ where: { id: batchGroup.id }, data: { status: "ERROR" } });
     return;
   }
@@ -756,6 +1793,14 @@ async function processBatchGroup(batchGroupId) {
     where: { batchGroupId: batchGroup.id },
     include: { requests: true },
     orderBy: { rowIndex: "asc" },
+  });
+  await prisma.requestGroup.updateMany({
+    where: { batchGroupId: batchGroup.id, status: { in: ["PENDING", "QUEUED"] } },
+    data: { status: "PROCESSING" },
+  });
+  await prisma.request.updateMany({
+    where: { requestGroup: { batchGroupId: batchGroup.id }, status: { in: ["PENDING", "QUEUED"] } },
+    data: { status: "PROCESSING" },
   });
 
   const docxDir = path.join(batchDir, "docx");
@@ -852,12 +1897,10 @@ async function processBatchGroup(batchGroupId) {
     const optimizedPath = path.join(optimizedDir, `${request.id}.pdf`);
     const pdfPath = path.join(pdfDir, `${request.id}.pdf`);
     const finalPath = fs.existsSync(optimizedPath) ? optimizedPath : fs.existsSync(pdfPath) ? pdfPath : null;
-    if (finalPath) {
-      await prisma.request.update({
-        where: { id: request.id },
-        data: { pdfPath: finalPath },
-      });
-    }
+    await prisma.request.update({
+      where: { id: request.id },
+      data: finalPath ? { pdfPath: finalPath, status: "READY" } : { status: "ERROR" },
+    });
   }
 
   await prisma.requestGroup.updateMany({
@@ -985,6 +2028,367 @@ const server = http.createServer((req, res) => {
         });
       } catch (error) {
         return json(res, 500, { error: "login_failed" });
+      }
+    })();
+  }
+
+  if (url === "/v1/auth/desktop-web-link" && method === "POST") {
+    return (async () => {
+      try {
+        const body = await readJson(req);
+        const email = String(body.email || "").toLowerCase();
+        const password = String(body.password || "");
+        const requestedBatchId = String(body.batchId || "").trim();
+        if (!email || !password) {
+          return json(res, 400, { error: "missing_credentials" });
+        }
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user || user.passwordHash !== password) {
+          return json(res, 401, { error: "invalid_credentials" });
+        }
+
+        let batchId = "";
+        if (requestedBatchId) {
+          const batch = await prisma.desktopBatch.findFirst({
+            where: {
+              id: requestedBatchId,
+              organizationId: user.organizationId || "",
+            },
+            select: { id: true },
+          });
+          if (!batch) return json(res, 404, { error: "desktop_batch_not_found" });
+          batchId = batch.id;
+        }
+
+        const token = signDesktopWebToken({
+          email: user.email,
+          role: user.role,
+          organizationId: user.organizationId || null,
+          batchId: batchId || null,
+          exp: Date.now() + 5 * 60 * 1000,
+        });
+        const webUrl = `${defaultWebAppUrl(req)}/admin/history.html?autoLoginToken=${encodeURIComponent(token)}${batchId ? `&batchId=${encodeURIComponent(batchId)}` : ""}`;
+        return json(res, 200, { url: webUrl });
+      } catch (error) {
+        return json(res, 500, { error: "desktop_web_link_failed" });
+      }
+    })();
+  }
+
+  if (url === "/v1/auth/desktop-token/consume" && method === "POST") {
+    return (async () => {
+      try {
+        const body = await readJson(req);
+        const payload = verifyDesktopWebToken(body.token);
+        if (!payload) return json(res, 401, { error: "invalid_or_expired_token" });
+        return json(res, 200, {
+          user: {
+            email: payload.email,
+            role: payload.role,
+            organizationId: payload.organizationId || null,
+          },
+          batchId: payload.batchId || null,
+        });
+      } catch (error) {
+        return json(res, 500, { error: "desktop_token_consume_failed" });
+      }
+    })();
+  }
+
+  if (url === "/v1/desktop-batches/import" && method === "POST") {
+    return (async () => {
+      try {
+        const contentType = req.headers["content-type"] || "";
+        if (!contentType.includes("multipart/form-data")) {
+          return json(res, 400, { error: "expected_multipart" });
+        }
+        const boundaryMatch = /boundary=(.+)$/.exec(contentType);
+        if (!boundaryMatch) return json(res, 400, { error: "missing_boundary" });
+
+        const buffer = await readBuffer(req);
+        const { fields, files } = parseMultipart(buffer, boundaryMatch[1]);
+        const organizationId = String(fields.organizationId || "").trim();
+        const uploadedByEmail = String(fields.uploadedByEmail || "").trim().toLowerCase();
+        const sourceExcel = String(fields.sourceExcel || "excel_local.xlsx").trim();
+        const manifest = safeJsonParse(fields.manifest, null);
+
+        if (!organizationId || !manifest || !Array.isArray(manifest.documents)) {
+          return json(res, 400, { error: "invalid_desktop_batch_payload" });
+        }
+
+        const organization = await prisma.organization.findUnique({ where: { id: organizationId } });
+        if (!organization) return json(res, 404, { error: "organization_not_found" });
+
+        const rows = Array.isArray(manifest.rows) ? manifest.rows : [];
+        const readyDocuments = manifest.documents.filter((document) => {
+          const status = String(document?.status || "").toUpperCase();
+          return status === "READY" && basenameFromDocument(document);
+        });
+        if (!readyDocuments.length) {
+          return json(res, 400, { error: "no_ready_documents" });
+        }
+
+        const fileMap = new Map(files.map((file) => [path.basename(file.filename || ""), file]));
+        const missingFile = readyDocuments.find((document) => !fileMap.has(basenameFromDocument(document)));
+        if (missingFile) {
+          return json(res, 400, { error: "missing_pdf_file", file: basenameFromDocument(missingFile) });
+        }
+
+        const batch = await prisma.desktopBatch.create({
+          data: {
+            organizationId,
+            sourceExcel,
+            status: "IMPORTED",
+            rowCount: rows.length,
+            documentCount: readyDocuments.length,
+            uploadedByEmail: uploadedByEmail || null,
+            manifestJson: manifest,
+          },
+        });
+
+        const batchDir = path.join(storagePath, "desktop-batches", organizationId, batch.id);
+        const pdfDir = path.join(batchDir, "pdf");
+        ensureDir(pdfDir);
+        fs.writeFileSync(path.join(batchDir, "manifest.json"), JSON.stringify(manifest, null, 2));
+
+        for (const document of readyDocuments) {
+          const fileKey = basenameFromDocument(document);
+          const uploadedFile = fileMap.get(fileKey);
+
+          const savedName = `${Date.now()}-${Math.random().toString(16).slice(2)}-${fileKey}`;
+          const pdfPath = path.join(pdfDir, savedName);
+          fs.writeFileSync(pdfPath, uploadedFile.data);
+
+          await prisma.desktopDocument.create({
+            data: {
+              batchId: batch.id,
+              rowIndex: Number(document.row_index ?? document.rowIndex ?? 0),
+              groupKey: String(document.group_key ?? document.groupKey ?? `registro-${batch.id}`),
+              templateName: String(document.template_name ?? document.templateName ?? "Plantilla"),
+              outputName: String(document.output_name ?? document.outputName ?? fileKey),
+              status: String(document.status || "READY").toUpperCase(),
+              pdfPath,
+              rowJson: rows[Number(document.row_index ?? document.rowIndex ?? 0)] || null,
+            },
+          });
+        }
+
+        return json(res, 201, {
+          batch: {
+            id: batch.id,
+            organizationId: batch.organizationId,
+            status: batch.status,
+            rowCount: batch.rowCount,
+            documentCount: batch.documentCount,
+          },
+        });
+      } catch (error) {
+        console.error(error);
+        return json(res, 500, { error: "desktop_batch_import_failed" });
+      }
+    })();
+  }
+
+  if (url.startsWith("/v1/desktop-batches") && method === "GET" && !url.includes("/documents")) {
+    return (async () => {
+      try {
+        const query = new URL(url, `http://${req.headers.host || "localhost"}`).searchParams;
+        const organizationId = query.get("organizationId");
+        const where = organizationId ? { organizationId } : {};
+        const items = await prisma.desktopBatch.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            organizationId: true,
+            sourceExcel: true,
+            status: true,
+            rowCount: true,
+            documentCount: true,
+            uploadedByEmail: true,
+            createdAt: true,
+          },
+        });
+        return json(res, 200, { items });
+      } catch (error) {
+        return json(res, 500, { error: "desktop_batches_failed" });
+      }
+    })();
+  }
+
+  if (pathOnly.startsWith("/v1/desktop-batches/") && pathOnly.endsWith("/documents") && method === "GET") {
+    return (async () => {
+      try {
+        const batchId = pathOnly.split("/")[3];
+        if (!batchId) return json(res, 400, { error: "missing_batch_id" });
+        const batch = await prisma.desktopBatch.findUnique({
+          where: { id: batchId },
+          include: { documents: { orderBy: [{ rowIndex: "asc" }, { templateName: "asc" }] } },
+        });
+        if (!batch) return json(res, 404, { error: "desktop_batch_not_found" });
+        const items = batch.documents.map((document) => ({
+          id: document.id,
+          rowIndex: document.rowIndex,
+          groupKey: document.groupKey,
+          templateName: document.templateName,
+          outputName: document.outputName,
+          status: document.status,
+          row: document.rowJson || {},
+          pdfUrl: toFileUrl(document.pdfPath),
+        }));
+        return json(res, 200, { items });
+      } catch (error) {
+        return json(res, 500, { error: "desktop_batch_documents_failed" });
+      }
+    })();
+  }
+
+  if (pathOnly.startsWith("/v1/desktop-batches/") && pathOnly.endsWith("/omni/send") && method === "POST") {
+    return (async () => {
+      try {
+        if (omniSwitchMode !== "mock") {
+          return json(res, 400, { error: "omni_mock_only" });
+        }
+        const batchId = pathOnly.split("/")[3];
+        if (!batchId) return json(res, 400, { error: "missing_batch_id" });
+        const body = await readJson(req);
+        const result = await createMockOmniRequestsForDesktopBatch(batchId, {
+          idProcess: body.idProcess,
+          billingMode: body.billingMode,
+          billingAmount: body.billingAmount,
+          billingCurrency: body.billingCurrency,
+          paymentReference: body.paymentReference,
+          forceResend: !!body.forceResend,
+        });
+        if (result.error) return json(res, result.status || 400, { error: result.error });
+        return json(res, result.status || 201, {
+          mode: omniSwitchMode,
+          items: result.items.map((item) => ({
+            id: item.id,
+            providerRequestId: item.providerRequestId,
+            status: item.status,
+            billingMode: item.billingMode,
+            billingAmount: item.billingAmount,
+            billingCurrency: item.billingCurrency,
+            paymentRequired: item.paymentRequired,
+            paymentReference: item.paymentReference,
+            paymentStatus: item.paymentStatus,
+            documentCount: item.documentCount,
+            signatoryCount: item.signatoryCount,
+          })),
+        });
+      } catch (error) {
+        console.error("Desktop batch Omni mock send failed:", error);
+        return json(res, 500, { error: "desktop_batch_omni_send_failed" });
+      }
+    })();
+  }
+
+  if (pathOnly === "/v1/omni-requests" && method === "GET") {
+    return (async () => {
+      try {
+        const query = new URL(url, `http://${req.headers.host || "localhost"}`).searchParams;
+        const desktopBatchId = String(query.get("desktopBatchId") || "").trim();
+        const organizationId = String(query.get("organizationId") || "").trim();
+        const where = {};
+        if (desktopBatchId) where.desktopBatchId = desktopBatchId;
+        if (organizationId) where.organizationId = organizationId;
+        const items = await prisma.omniRequest.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          include: {
+            documents: {
+              orderBy: { createdAt: "asc" },
+              include: {
+                desktopDocument: {
+                  select: {
+                    rowJson: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+        return json(res, 200, {
+          mode: omniSwitchMode,
+          items: items.map((item) => ({
+            id: item.id,
+            organizationId: item.organizationId,
+            desktopBatchId: item.desktopBatchId,
+            requestGroupId: item.requestGroupId,
+            providerRequestId: item.providerRequestId,
+            status: item.status,
+            billingMode: item.billingMode,
+            billingAmount: item.billingAmount,
+            billingCurrency: item.billingCurrency,
+            paymentRequired: item.paymentRequired,
+            paymentReference: item.paymentReference,
+            paymentStatus: item.paymentStatus,
+            idProcess: item.idProcess,
+            documentCount: item.documentCount,
+            signatoryCount: item.signatoryCount,
+            sentAt: item.sentAt,
+            signedAt: item.signedAt,
+            lastPolledAt: item.lastPolledAt,
+            lastProviderStatus: item.lastProviderStatus,
+            documents: item.documents.map((document) => serializeOmniDocument(document, item.signatoryCount)),
+          })),
+        });
+      } catch (error) {
+        console.error("Omni requests fetch failed:", error);
+        return json(res, 500, { error: "omni_requests_failed" });
+      }
+    })();
+  }
+
+  if (pathOnly.startsWith("/v1/omni-requests/") && method === "GET" && !pathOnly.endsWith("/poll") && !pathOnly.endsWith("/mock-sign")) {
+    return (async () => {
+      try {
+        const omniRequestId = pathOnly.split("/")[3];
+        if (!omniRequestId) return json(res, 400, { error: "missing_omni_request_id" });
+        const item = await getOmniRequestResponseItem(omniRequestId);
+        if (!item) return json(res, 404, { error: "omni_request_not_found" });
+        return json(res, 200, {
+          mode: omniSwitchMode,
+          item,
+        });
+      } catch (error) {
+        console.error("Omni request fetch failed:", error);
+        return json(res, 500, { error: "omni_request_failed" });
+      }
+    })();
+  }
+
+  if (pathOnly.startsWith("/v1/omni-requests/") && pathOnly.endsWith("/poll") && method === "POST") {
+    return (async () => {
+      try {
+        const omniRequestId = pathOnly.split("/")[3];
+        if (!omniRequestId) return json(res, 400, { error: "missing_omni_request_id" });
+        if (omniSwitchMode !== "mock") return json(res, 400, { error: "omni_mock_only" });
+        const updated = await processMockOmniRequest(omniRequestId);
+        if (!updated) return json(res, 404, { error: "omni_request_not_found" });
+        return json(res, 200, { mode: omniSwitchMode, item: updated });
+      } catch (error) {
+        console.error("Omni request poll failed:", error);
+        return json(res, 500, { error: "omni_request_poll_failed" });
+      }
+    })();
+  }
+
+  if (pathOnly.startsWith("/v1/omni-requests/") && pathOnly.endsWith("/mock-sign") && method === "POST") {
+    return (async () => {
+      try {
+        const omniRequestId = pathOnly.split("/")[3];
+        if (!omniRequestId) return json(res, 400, { error: "missing_omni_request_id" });
+        if (omniSwitchMode !== "mock") return json(res, 400, { error: "omni_mock_only" });
+        const body = await readJson(req);
+        const targetDocumentId = String(body.documentId || "").trim();
+        const result = await mockSignOmniDocuments(omniRequestId, targetDocumentId);
+        if (result.error) return json(res, result.status || 400, { error: result.error });
+        return json(res, result.status || 200, { mode: omniSwitchMode, item: result.item });
+      } catch (error) {
+        console.error("Omni mock sign failed:", error);
+        return json(res, 500, { error: "omni_mock_sign_failed" });
       }
     })();
   }
@@ -1232,8 +2636,8 @@ const server = http.createServer((req, res) => {
         if (!batchId) return json(res, 400, { error: "missing_batch_id" });
         const batch = await prisma.batch.findUnique({ where: { id: batchId } });
         if (!batch) return json(res, 404, { error: "batch_not_found" });
-        if (batch.status !== "PENDING") {
-          return json(res, 409, { error: "batch_not_pending" });
+        if (!["PENDING", "QUEUED"].includes(batch.status)) {
+          return json(res, 409, { error: "batch_not_queued" });
         }
         setImmediate(() => {
           processBatch(batch.id).catch((error) => console.error("Batch process failed:", error));
@@ -1277,13 +2681,14 @@ const server = http.createServer((req, res) => {
         const requests = await prisma.request.findMany({
           where: { batchId },
           orderBy: { createdAt: "asc" },
-          select: { id: true, pdfPath: true, docxPath: true },
+          select: { id: true, status: true, pdfPath: true, docxPath: true },
         });
         const items = requests.map((reqItem, index) => ({
           index,
           row: rows[index] || {},
           request: {
             id: reqItem.id,
+            status: reqItem.status,
             pdfUrl: toFileUrl(reqItem.pdfPath),
             docxUrl: toFileUrl(reqItem.docxPath),
           },
@@ -1302,8 +2707,8 @@ const server = http.createServer((req, res) => {
         if (!batchId) return json(res, 400, { error: "missing_batch_id" });
         const batch = await prisma.batchGroup.findUnique({ where: { id: batchId } });
         if (!batch) return json(res, 404, { error: "batch_not_found" });
-        if (batch.status !== "PENDING") {
-          return json(res, 409, { error: "batch_not_pending" });
+        if (!["PENDING", "QUEUED"].includes(batch.status)) {
+          return json(res, 409, { error: "batch_not_queued" });
         }
         setImmediate(() => {
           processBatchGroup(batch.id).catch((error) => console.error("Batch group process failed:", error));
@@ -1373,7 +2778,7 @@ const server = http.createServer((req, res) => {
             data: {
               organizationId,
               groupId: tempGroup.id,
-              status: "PENDING",
+              status: "QUEUED",
               totalCount: rows.length,
               validCount: rows.length,
               invalidCount: 0,
@@ -1391,7 +2796,7 @@ const server = http.createServer((req, res) => {
               data: {
                 batchGroupId: batchGroup.id,
                 rowIndex,
-                status: "PENDING",
+                status: "QUEUED",
               },
             });
 
@@ -1402,7 +2807,7 @@ const server = http.createServer((req, res) => {
                 organizationId,
                 templateId: template.id,
                 requestGroupId: requestGroup.id,
-                status: "PENDING",
+                status: "QUEUED",
               };
               if (signatories.length) {
                 requestData.signatories = { create: signatories };
@@ -1410,6 +2815,10 @@ const server = http.createServer((req, res) => {
               await prisma.request.create({ data: requestData });
             }
           }
+
+          setImmediate(() => {
+            processBatchGroup(batchGroup.id).catch((error) => console.error("Batch group auto process failed:", error));
+          });
 
           return json(res, 201, {
             batchId: batchGroup.id,
@@ -1431,7 +2840,7 @@ const server = http.createServer((req, res) => {
           data: {
             organizationId,
             templateId,
-            status: "PENDING",
+            status: "QUEUED",
             totalCount: rows.length,
             validCount: rows.length,
             invalidCount: 0,
@@ -1450,7 +2859,7 @@ const server = http.createServer((req, res) => {
             organizationId,
             templateId,
             batchId: batch.id,
-            status: "PENDING",
+            status: "QUEUED",
             ...(signatories.length ? { signatories: { create: signatories } } : {}),
           });
         }
@@ -1458,6 +2867,10 @@ const server = http.createServer((req, res) => {
         for (const data of requestCreates) {
           await prisma.request.create({ data });
         }
+
+        setImmediate(() => {
+          processBatch(batch.id).catch((error) => console.error("Batch auto process failed:", error));
+        });
 
         return json(res, 201, { batchId: batch.id, total: rows.length, mode: "single", templateCount: 1 });
       } catch (error) {
@@ -1952,6 +3365,7 @@ const server = http.createServer((req, res) => {
           row: rows[group.rowIndex] || {},
           requests: group.requests.map((reqItem) => ({
             id: reqItem.id,
+            status: reqItem.status,
             templateName: reqItem.template?.name || "Plantilla",
             pdfUrl: toFileUrl(reqItem.pdfPath),
             docxUrl: toFileUrl(reqItem.docxPath),
@@ -2164,6 +3578,147 @@ const server = http.createServer((req, res) => {
         return json(res, 200, { items: groups });
       } catch (error) {
         return json(res, 500, { error: "template_groups_failed" });
+      }
+    })();
+  }
+
+  if (pathOnly === "/v1/rc-validations/run" && method === "POST") {
+    return (async () => {
+      try {
+        const contentType = req.headers["content-type"] || "";
+        if (!contentType.includes("multipart/form-data")) {
+          return json(res, 400, { error: "expected_multipart" });
+        }
+        const boundaryMatch = /boundary=(.+)$/.exec(contentType);
+        if (!boundaryMatch) return json(res, 400, { error: "missing_boundary" });
+
+        const buffer = await readBuffer(req);
+        const { fields, files } = parseMultipart(buffer, boundaryMatch[1]);
+        const organizationId = String(fields.organizationId || "").trim();
+        const file = files.find((item) => item.name === "excel");
+        if (!organizationId || !file) {
+          return json(res, 400, { error: "missing_fields" });
+        }
+
+        const organization = await prisma.organization.findUnique({ where: { id: organizationId } });
+        if (!organization) return json(res, 404, { error: "organization_not_found" });
+
+        const run = buildRcValidationRun({
+          workbookBuffer: file.data,
+          filename: file.filename || "archivo.xlsx",
+          options: {
+            compareNames: parseBooleanFlag(fields.compareNames, true),
+            compareLastNames: parseBooleanFlag(fields.compareLastNames, true),
+            createCorrectedCopy: parseBooleanFlag(fields.createCorrectedCopy, true),
+          },
+        });
+
+        const runId = crypto.randomUUID();
+        const runDir = path.join(storagePath, "rc-validations", organizationId, runId);
+        ensureDir(runDir);
+
+        const sourceExtension = path.extname(file.filename || ".xlsx") || ".xlsx";
+        const sourcePath = path.join(runDir, `original${sourceExtension}`);
+        const correctedPath = path.join(runDir, `${path.parse(file.filename || "archivo").name}_validado.xlsx`);
+        const summaryPath = path.join(runDir, "summary.json");
+
+        fs.writeFileSync(sourcePath, file.data);
+        fs.writeFileSync(correctedPath, run.correctedBuffer);
+        fs.writeFileSync(
+          summaryPath,
+          JSON.stringify(
+            {
+              id: runId,
+              organizationId,
+              sourceFileName: run.sourceFileName,
+              createdAt: new Date().toISOString(),
+              detectedColumns: run.detectedColumns,
+              summary: run.summary,
+              results: run.results,
+              correctedFileName: path.basename(correctedPath),
+            },
+            null,
+            2
+          )
+        );
+
+        return json(res, 201, {
+          run: {
+            id: runId,
+            organizationId,
+            sourceFileName: run.sourceFileName,
+            createdAt: new Date().toISOString(),
+            detectedColumns: run.detectedColumns,
+            summary: run.summary,
+            correctedFileName: path.basename(correctedPath),
+            downloadUrl: `/v1/rc-validations/${encodeURIComponent(runId)}/download?organizationId=${encodeURIComponent(organizationId)}`,
+          },
+          items: run.results,
+        });
+      } catch (error) {
+        console.error(error);
+        return json(res, 500, { error: "rc_validation_run_failed", detail: String(error?.message || error) });
+      }
+    })();
+  }
+
+  if (pathOnly.startsWith("/v1/rc-validations/") && pathOnly.endsWith("/download") && method === "GET") {
+    return (async () => {
+      try {
+        const query = new URL(url, `http://${req.headers.host || "localhost"}`).searchParams;
+        const organizationId = String(query.get("organizationId") || "").trim();
+        const runId = pathOnly.split("/")[3];
+        if (!organizationId || !runId) return json(res, 400, { error: "missing_fields" });
+
+        const runDir = path.join(storagePath, "rc-validations", organizationId, runId);
+        const summaryPath = path.join(runDir, "summary.json");
+        if (!fs.existsSync(summaryPath)) return json(res, 404, { error: "rc_validation_not_found" });
+        const summary = safeJsonParse(fs.readFileSync(summaryPath, "utf-8"), null);
+        const correctedFileName = String(summary?.correctedFileName || "").trim();
+        if (!correctedFileName) return json(res, 404, { error: "validated_file_not_found" });
+        const filePath = path.join(runDir, correctedFileName);
+        if (!fs.existsSync(filePath)) return json(res, 404, { error: "validated_file_not_found" });
+
+        res.writeHead(200, {
+          "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "content-disposition": `attachment; filename="${path.basename(filePath)}"`,
+        });
+        fs.createReadStream(filePath).pipe(res);
+      } catch (error) {
+        console.error(error);
+        return json(res, 500, { error: "rc_validation_download_failed" });
+      }
+    })();
+  }
+
+  if (pathOnly.startsWith("/v1/rc-validations/") && method === "GET") {
+    return (async () => {
+      try {
+        const query = new URL(url, `http://${req.headers.host || "localhost"}`).searchParams;
+        const organizationId = String(query.get("organizationId") || "").trim();
+        const runId = pathOnly.split("/")[3];
+        if (!organizationId || !runId) return json(res, 400, { error: "missing_fields" });
+
+        const summaryPath = path.join(storagePath, "rc-validations", organizationId, runId, "summary.json");
+        if (!fs.existsSync(summaryPath)) return json(res, 404, { error: "rc_validation_not_found" });
+        const payload = safeJsonParse(fs.readFileSync(summaryPath, "utf-8"), null);
+        if (!payload) return json(res, 500, { error: "rc_validation_read_failed" });
+        return json(res, 200, {
+          run: {
+            id: payload.id,
+            organizationId: payload.organizationId,
+            sourceFileName: payload.sourceFileName,
+            createdAt: payload.createdAt,
+            detectedColumns: payload.detectedColumns,
+            summary: payload.summary,
+            correctedFileName: payload.correctedFileName,
+            downloadUrl: `/v1/rc-validations/${encodeURIComponent(runId)}/download?organizationId=${encodeURIComponent(organizationId)}`,
+          },
+          items: Array.isArray(payload.results) ? payload.results : [],
+        });
+      } catch (error) {
+        console.error(error);
+        return json(res, 500, { error: "rc_validation_fetch_failed" });
       }
     })();
   }

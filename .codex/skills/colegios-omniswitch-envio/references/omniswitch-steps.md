@@ -46,7 +46,7 @@ Reglas:
 - `numeroPagina` y `Coordenadas` pueden cambiar por documento.
 - Considerar timeout cercano a 30s: optimizar PDFs pesados antes de convertir a Base64.
 
-## Paso 3: Registrar Firmante
+## Paso 3: Registrar Firmante(s)
 
 Script: `3_registrar_firmantes.py`
 
@@ -72,6 +72,8 @@ Payload base:
 Reglas:
 - Los firmantes quedan vinculados a la `IDSolicitud`, no a un documento individual.
 - La misma lista de firmantes aplica automaticamente a todos los PDFs ya cargados en la solicitud.
+- Repetir `SolicitudeCreateSignatory` una vez por cada firmante.
+- Marcar solo un firmante como `FirmaPrincipal=1`; los demas deben ir con `FirmaPrincipal=0`.
 
 ## Paso 4: Disparar Envio
 
@@ -88,10 +90,30 @@ Payload base:
 
 1. Crear solicitud
 2. Cargar uno o varios documentos
-3. Registrar firmante
+3. Registrar uno o varios firmantes
 4. Disparar envio
 
 No reordenar pasos.
+
+## Variante valida: 2 PDFs + 2 firmantes
+
+Orden exacto:
+
+1. `SolicitudeCreate` una vez.
+2. `SolicitudeCreateDocument` para el PDF 1.
+3. `SolicitudeCreateDocument` para el PDF 2.
+4. `SolicitudeCreateSignatory` para el firmante 1 con `FirmaPrincipal=1`.
+5. `SolicitudeCreateSignatory` para el firmante 2 con `FirmaPrincipal=0`.
+6. `SolicitudeSend` una vez.
+7. `GetSolicitudByID` en bucle hasta confirmar `DocFirmado="1"` en ambos documentos.
+8. `SolicitudeGetDocument` para el PDF 1.
+9. `SolicitudeGetDocument` para el PDF 2.
+
+Generalizacion:
+
+- Para `N` PDFs, repetir `SolicitudeCreateDocument` `N` veces.
+- Para `M` firmantes, repetir `SolicitudeCreateSignatory` `M` veces.
+- Mantener la misma `IDSolicitud` en todas las llamadas del mismo tramite.
 
 ## Consulta de Estado
 

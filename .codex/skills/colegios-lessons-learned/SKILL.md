@@ -89,6 +89,48 @@ Use this skill to repeat the working setup: local compose with web + api + worke
 - Default the admin history to the latest uploaded desktop batch.
 - Let the operator expand to all batches only when needed.
 - Show signer identity from row fields (`PrimerNombre`, `SegunNombre`, `PrimerApellido`, `SegApellido`) in the selected batch detail and document search.
+- Keep `history.html` consultation-only:
+  - compact numeric list/table of batches
+  - click on row or numeric index opens batch detail in a modal
+  - do not keep large embedded detail panes in the main page
+- Use PDF modal preview as an on-demand action, not as a permanently embedded panel when the user asks for a cleaner UI.
+
+## OmniSwitch Pattern
+- The signing pipeline is grouped by Excel row:
+  - `1 fila = 1 solicitud`
+  - `N PDFs de esa fila = N documentos en la misma `IDSolicitud``
+- In local development, prefer `OMNISWITCH_MODE=mock` because the real provider may reject requests by public IP whitelist.
+- Treat OmniSwitch functional failures by inspecting `resultCode`, not only HTTP status.
+- Reserve `real` mode for environments whose public IP is authorized by the provider.
+- Poll by `IDSolicitud`, but resolve progress per document using the provider array response and `DocFirmado`.
+- Keep `NombreDocumento` unique inside each request and use `DocAFirmar` as the canonical download key.
+- Do not assume provider idempotency; protect duplicate sends and duplicate signatory registration on our side.
+- `SENT` is only the initial local/provider-send state:
+  - in `mock`, it changes only after `mock-sign` or auto-sign
+  - in `real`, it changes only after polling `GetSolicitudByID`
+- Treat `IdPais`, `IdProvincia` and `IdCiudad` as provider catalog IDs; for the validated Ecuador flow, the working defaults are `19`, `17`, `1701`.
+- `QueryRC` is a separate identity-validation stage, not a substitute for the document-signature flow itself.
+- `Cedula` alone means demographic validation; `Cedula + CodigoDactilar` means biometric validation.
+- If `Celular` and `Email` are sent to `QueryRC`, the provider may also emit a signed data-acceptance document.
+- For signer-paid flows, `PaymentRequired` is not just a boolean idea:
+  - institution pays: `PaymentRequired=0`, `amount=0`
+  - signer pays: store and send an operational payment reference plus the exact amount
+- In current operator UX, duplicate warnings matter only for `Cedula`; do not block or warn by duplicated email/cellular unless product rules change.
+
+## Signing UX Pattern
+- Keep signing as a single operational page (`signing.html`) focused on blocks/rows, not individual PDFs.
+- Each block means:
+  - 1 Excel row
+  - 1 Omni request
+  - N PDFs behind the scenes
+- The page should show:
+  - firmante
+  - estado
+  - alertas
+  - acciones de envio/actualizacion
+- The first PDF is only a visual reference:
+  - open it in a modal on demand
+  - do not keep a fixed embedded iframe if the user asks for a simpler screen
 
 ## Control Mode
 - Always execute OS-level commands directly when possible (docker, git, logs, health checks).
