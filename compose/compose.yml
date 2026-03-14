@@ -53,11 +53,17 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK:-coolify}
-      - traefik.http.routers.${CLIENT_ID:-colegios}-api.rule=Host(`${API_DOMAIN}`)
+      - traefik.http.routers.${CLIENT_ID:-colegios}-api.rule=Host(`${WEB_DOMAIN}`) && PathPrefix(`/v1`)
       - traefik.http.routers.${CLIENT_ID:-colegios}-api.entrypoints=websecure
       - traefik.http.routers.${CLIENT_ID:-colegios}-api.tls=true
       - traefik.http.routers.${CLIENT_ID:-colegios}-api.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}
+      - traefik.http.routers.${CLIENT_ID:-colegios}-api.priority=100
       - traefik.http.services.${CLIENT_ID:-colegios}-api.loadbalancer.server.port=8080
+      - traefik.http.routers.${CLIENT_ID:-colegios}-api-http.rule=Host(`${WEB_DOMAIN}`) && PathPrefix(`/v1`)
+      - traefik.http.routers.${CLIENT_ID:-colegios}-api-http.entrypoints=web
+      - traefik.http.routers.${CLIENT_ID:-colegios}-api-http.middlewares=${CLIENT_ID}-redirect
+      - traefik.http.middlewares.${CLIENT_ID}-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.${CLIENT_ID}-redirect.redirectscheme.permanent=true
     logging: *default-logging
 
   worker:
@@ -141,7 +147,11 @@ services:
       - traefik.http.routers.${CLIENT_ID:-colegios}-web.entrypoints=websecure
       - traefik.http.routers.${CLIENT_ID:-colegios}-web.tls=true
       - traefik.http.routers.${CLIENT_ID:-colegios}-web.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}
+      - traefik.http.routers.${CLIENT_ID:-colegios}-web.priority=10
       - traefik.http.services.${CLIENT_ID:-colegios}-web.loadbalancer.server.port=80
+      - traefik.http.routers.${CLIENT_ID:-colegios}-web-http.rule=Host(`${WEB_DOMAIN}`)
+      - traefik.http.routers.${CLIENT_ID:-colegios}-web-http.entrypoints=web
+      - traefik.http.routers.${CLIENT_ID:-colegios}-web-http.middlewares=${CLIENT_ID}-redirect
     logging: *default-logging
 
   postgres:

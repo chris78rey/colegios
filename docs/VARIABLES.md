@@ -20,8 +20,8 @@
 
 ### Proxy y dominio
 - `CLIENT_ID`: identificador para labels Traefik.
-- `WEB_DOMAIN`: dominio frontend.
-- `API_DOMAIN`: dominio API.
+- `WEB_DOMAIN`: dominio publico. En despliegue recomendado sirve frontend y API en el mismo host.
+- `API_DOMAIN`: opcional; mantener vacio si la API se expone bajo `/v1` en `WEB_DOMAIN`.
 - `TRAEFIK_DOCKER_NETWORK`: red externa de Traefik.
 - `TRAEFIK_CERT_RESOLVER`: resolvedor TLS.
 
@@ -44,6 +44,8 @@
 
 ### Aplicacion / secretos
 - `DESKTOP_WEB_TOKEN_SECRET`
+- `WEB_APP_URL`
+- `CORS_ORIGIN`
 - `OMNISWITCH_MODE`
 - `OMNISWITCH_API_URL`
 - `OMNISWITCH_USER`
