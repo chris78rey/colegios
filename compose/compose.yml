@@ -1,0 +1,203 @@
+﻿name: ${COMPOSE_PROJECT_NAME:-colegios_ops}
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+services:
+  api:
+    build:
+      context: ../services/api
+      dockerfile: Dockerfile
+    image: ${API_IMAGE:-colegios_api:local}
+    restart: unless-stopped
+    env_file:
+      - ../env/.env
+    environment:
+      TZ: ${TZ:-America/Guayaquil}
+      NODE_ENV: ${APP_ENV:-production}
+      PORT: 8080
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379
+      STORAGE_PATH: /data/storage
+      API_BASE_URL: http://api:8080
+      APP_VERSION: ${APP_VERSION:-dev}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - ../data/storage:/data/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+      - public
+    expose:
+      - "8080"
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    mem_limit: ${API_MEM_LIMIT:-768m}
+    mem_reservation: ${API_MEM_RESERVATION:-256m}
+    cpus: ${API_CPUS:-1.0}
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK:-coolify}
+      - traefik.http.routers.${CLIENT_ID:-colegios}-api.rule=Host(`${API_DOMAIN}`)
+      - traefik.http.routers.${CLIENT_ID:-colegios}-api.entrypoints=websecure
+      - traefik.http.routers.${CLIENT_ID:-colegios}-api.tls=true
+      - traefik.http.routers.${CLIENT_ID:-colegios}-api.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}
+      - traefik.http.services.${CLIENT_ID:-colegios}-api.loadbalancer.server.port=8080
+    logging: *default-logging
+
+  worker:
+    build:
+      context: ../services/worker
+      dockerfile: Dockerfile
+    image: ${WORKER_IMAGE:-colegios_worker:local}
+    restart: unless-stopped
+    env_file:
+      - ../env/.env
+    environment:
+      TZ: ${TZ:-America/Guayaquil}
+      NODE_ENV: ${APP_ENV:-production}
+      PORT: 8081
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379
+      STORAGE_PATH: /data/storage
+      API_BASE_URL: http://api:8080
+      APP_VERSION: ${APP_VERSION:-dev}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - ../data/storage:/data/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks:
+      - internal
+    expose:
+      - "8081"
+    ports:
+      - "127.0.0.1:${WORKER_HOST_PORT:-8081}:8081"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8081/ready').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    mem_limit: ${WORKER_MEM_LIMIT:-512m}
+    mem_reservation: ${WORKER_MEM_RESERVATION:-128m}
+    cpus: ${WORKER_CPUS:-0.75}
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
+  web:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    env_file:
+      - ../env/.env
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - ../web:/usr/share/nginx/html:ro
+    networks:
+      - internal
+      - public
+    expose:
+      - "80"
+    ports:
+      - "127.0.0.1:${WEB_HOST_PORT:-5173}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    mem_limit: ${WEB_MEM_LIMIT:-192m}
+    mem_reservation: ${WEB_MEM_RESERVATION:-64m}
+    cpus: ${WEB_CPUS:-0.50}
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK:-coolify}
+      - traefik.http.routers.${CLIENT_ID:-colegios}-web.rule=Host(`${WEB_DOMAIN}`)
+      - traefik.http.routers.${CLIENT_ID:-colegios}-web.entrypoints=websecure
+      - traefik.http.routers.${CLIENT_ID:-colegios}-web.tls=true
+      - traefik.http.routers.${CLIENT_ID:-colegios}-web.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}
+      - traefik.http.services.${CLIENT_ID:-colegios}-web.loadbalancer.server.port=80
+    logging: *default-logging
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - ../env/.env
+    environment:
+      TZ: ${TZ:-America/Guayaquil}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ../data/postgres:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h 127.0.0.1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    mem_limit: ${POSTGRES_MEM_LIMIT:-1024m}
+    mem_reservation: ${POSTGRES_MEM_RESERVATION:-256m}
+    cpus: ${POSTGRES_CPUS:-1.0}
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "${REDIS_MAXMEMORY:-256mb}", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - ../data/redis:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    mem_limit: ${REDIS_MEM_LIMIT:-320m}
+    mem_reservation: ${REDIS_MEM_RESERVATION:-64m}
+    cpus: ${REDIS_CPUS:-0.50}
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
+networks:
+  internal:
+    name: ${COMPOSE_PROJECT_NAME:-colegios_ops}_internal
+    driver: bridge
+    internal: true
+  public:
+    name: ${TRAEFIK_DOCKER_NETWORK:-coolify}
+    external: true

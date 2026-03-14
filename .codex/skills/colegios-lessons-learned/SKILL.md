@@ -138,3 +138,4 @@ Use this skill to repeat the working setup: local compose with web + api + worke
 
 ## References
 - Detailed notes: `references/lessons.md`
+- Operación Compose VPS estandarizada: `../colegios-ops-compose-vps/SKILL.md`

@@ -21,6 +21,7 @@ const omniDefaultCountryId = Number(process.env.OMNISWITCH_DEFAULT_COUNTRY_ID ||
 const omniDefaultProvinceId = Number(process.env.OMNISWITCH_DEFAULT_PROVINCE_ID || 17);
 const omniDefaultCityId = Number(process.env.OMNISWITCH_DEFAULT_CITY_ID || 1701);
 const omniMockAutoSignMs = Math.max(0, Number(process.env.OMNISWITCH_MOCK_AUTO_SIGN_MS) || 0);
+const serviceVersion = process.env.APP_VERSION || "dev";
 
 function json(res, status, body) {
   res.writeHead(status, { "content-type": "application/json" });
@@ -1918,6 +1919,23 @@ const server = http.createServer((req, res) => {
   const url = req.url || "/";
   const method = req.method || "GET";
   const pathOnly = url.split("?")[0];
+  const requestId = req.headers["x-request-id"] || crypto.randomUUID();
+  const startedAt = Date.now();
+  res.setHeader("x-request-id", requestId);
+  res.on("finish", () => {
+    console.log(
+      JSON.stringify({
+        ts: new Date().toISOString(),
+        level: "info",
+        service: "api",
+        request_id: requestId,
+        method,
+        path: pathOnly,
+        status_code: res.statusCode,
+        duration_ms: Date.now() - startedAt,
+      })
+    );
+  });
 
   setCors(res);
   if (method === "OPTIONS") {
@@ -1927,6 +1945,26 @@ const server = http.createServer((req, res) => {
 
   if (url === "/health") {
     return json(res, 200, { status: "ok" });
+  }
+
+  if (url === "/ready" && method === "GET") {
+    return (async () => {
+      try {
+        await prisma.$queryRaw`SELECT 1`;
+        return json(res, 200, { status: "ready", checks: { database: "ok" } });
+      } catch (error) {
+        return json(res, 503, { status: "not_ready", checks: { database: "down" } });
+      }
+    })();
+  }
+
+  if (url === "/version" && method === "GET") {
+    return json(res, 200, {
+      service: "api",
+      version: serviceVersion,
+      env: process.env.NODE_ENV || "unknown",
+      now: new Date().toISOString(),
+    });
   }
 
   if (pathOnly === "/v1/examples/template-base-html" && method === "GET") {
