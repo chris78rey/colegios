@@ -52,6 +52,21 @@ bash scripts/inspect.sh api
 bash scripts/inspect.sh postgres
 ```
 
+## 6.1) Soporte VPS interactivo
+Para diagnostico rapido en VPS con contenedores de Coolify:
+```bash
+bash scripts/vps-debug.sh
+RESOURCE_UUID=kog0wcwocwcsok8cwc4gc80g bash scripts/vps-debug.sh status
+RESOURCE_UUID=kog0wcwocwcsok8cwc4gc80g bash scripts/vps-debug.sh api-env
+RESOURCE_UUID=kog0wcwocwcsok8cwc4gc80g bash scripts/vps-debug.sh postgres-check
+```
+
+Atajos utiles:
+- `api-env`: muestra `POSTGRES_*`, `DATABASE_URL`, `REDIS_*`, `OMNI*`, `FIRMALO*`.
+- `api-logs`: saca las ultimas lineas del `api`.
+- `postgres-check`: valida acceso TCP real a Postgres con las credenciales del contenedor.
+- `ports`: revisa puertos Docker publicados y listeners locales del host.
+
 ## 7) Recuperacion rapida recomendada
 1. `bash scripts/status.sh`
 2. `bash scripts/check-env.sh`
