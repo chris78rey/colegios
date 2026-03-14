@@ -9,12 +9,12 @@ x-logging: &default-logging
 services:
   api:
     build:
-      context: ../services/api
+      context: ./services/api
       dockerfile: Dockerfile
     image: ${API_IMAGE:-colegios_api:local}
     restart: unless-stopped
     env_file:
-      - ../env/.env
+      - ./env/.env
     environment:
       TZ: ${TZ:-America/Guayaquil}
       NODE_ENV: ${APP_ENV:-production}
@@ -26,7 +26,7 @@ services:
       APP_VERSION: ${APP_VERSION:-dev}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
-      - ../data/storage:/data/storage
+      - ./data/storage:/data/storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -68,12 +68,12 @@ services:
 
   worker:
     build:
-      context: ../services/worker
+      context: ./services/worker
       dockerfile: Dockerfile
     image: ${WORKER_IMAGE:-colegios_worker:local}
     restart: unless-stopped
     env_file:
-      - ../env/.env
+      - ./env/.env
     environment:
       TZ: ${TZ:-America/Guayaquil}
       NODE_ENV: ${APP_ENV:-production}
@@ -85,7 +85,7 @@ services:
       APP_VERSION: ${APP_VERSION:-dev}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
-      - ../data/storage:/data/storage
+      - ./data/storage:/data/storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -116,12 +116,12 @@ services:
     image: nginx:1.27-alpine
     restart: unless-stopped
     env_file:
-      - ../env/.env
+      - ./env/.env
     depends_on:
       api:
         condition: service_healthy
     volumes:
-      - ../web:/usr/share/nginx/html:ro
+      - ./web:/usr/share/nginx/html:ro
     networks:
       - internal
       - public
@@ -158,7 +158,7 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     env_file:
-      - ../env/.env
+      - ./env/.env
     environment:
       TZ: ${TZ:-America/Guayaquil}
       POSTGRES_DB: ${POSTGRES_DB}
@@ -166,7 +166,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - ../data/postgres:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
     networks:
       - internal
     healthcheck:
@@ -187,7 +187,7 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes", "--maxmemory", "${REDIS_MAXMEMORY:-256mb}", "--maxmemory-policy", "allkeys-lru"]
     volumes:
-      - ../data/redis:/data
+      - ./data/redis:/data
     networks:
       - internal
     healthcheck:
