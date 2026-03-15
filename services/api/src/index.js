@@ -369,6 +369,15 @@ function toDecimalString(value, fallback = "0.00") {
   return numeric.toFixed(2);
 }
 
+function normalizeOmniAmount(value, fallback = "0") {
+  if (value === null || value === undefined || value === "") return fallback;
+  const normalized = String(value).trim().replace(",", ".");
+  const numeric = Number(normalized);
+  if (!Number.isFinite(numeric)) return fallback;
+  if (numeric === 0) return "0";
+  return String(numeric);
+}
+
 function normalizeOmniPersonName(value) {
   return String(value || "").trim().toUpperCase();
 }
@@ -1620,7 +1629,7 @@ async function createRealOmniRequestsForDesktopBatch(batchId, options = {}) {
       const createdPayload = await omniPost("SolicitudeCreate", {
         IdProcess: getOmniProcessId(options.idProcess),
         PaymentRequired: billing.paymentRequired ? 1 : 0,
-        amount: billing.paymentRequired ? billing.billingAmount : "0",
+        amount: billing.paymentRequired ? normalizeOmniAmount(billing.billingAmount, "0") : "0",
         BiometricRequired: biometricRequired,
       });
       assertOmniSuccess(createdPayload, "omni_request_create_failed");
