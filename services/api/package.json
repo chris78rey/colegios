@@ -6,6 +6,7 @@
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
     "omni:debug-send": "node scripts/omni-send-debug.mjs",
+    "omni:rc-debug": "node scripts/query-rc-debug.mjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
   },

@@ -2506,6 +2506,38 @@ const server = http.createServer((req, res) => {
     });
   }
 
+  if (pathOnly === "/v1/test/query-rc" && method === "POST") {
+    return (async () => {
+      try {
+        const body = await readJson(req);
+        
+        const auth = {
+          UserName: omniSwitchUser,
+          Password: omniSwitchPassword,
+        };
+
+        const response = await fetch(`${omniSwitchApiUrl}/QueryRC`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ...auth, ...body }),
+        });
+        
+        const raw = await response.text();
+        let parsed;
+        try {
+          parsed = raw ? JSON.parse(raw) : {};
+        } catch {
+          parsed = { raw };
+        }
+        
+        return json(res, response.status, parsed);
+      } catch (error) {
+        console.error("QueryRC Proxy Error:", error);
+        return json(res, 500, { error: "proxy_failed", detail: error.message });
+      }
+    })();
+  }
+
   if (pathOnly === "/v1/examples/template-base-html" && method === "GET") {
     return (() => {
       try {
