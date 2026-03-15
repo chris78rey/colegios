@@ -181,6 +181,15 @@
                     </select>
                   </div>
                   <div>
+                    <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400" for="biometric-required">
+                      Biometrico
+                    </label>
+                    <select class="w-full rounded-xl border-2 border-slate-200 bg-white px-3 py-2 text-sm" id="biometric-required">
+                      <option value="1">Requerido</option>
+                      <option value="0">No requerido</option>
+                    </select>
+                  </div>
+                  <div>
                     <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400" for="billing-mode">
                       Cobro
                     </label>
@@ -357,6 +366,7 @@
       const latestOnly = document.getElementById("latest-only");
       const batchList = document.getElementById("batch-list");
       const idProcess = document.getElementById("id-process");
+      const biometricRequired = document.getElementById("biometric-required");
       const billingMode = document.getElementById("billing-mode");
       const billingAmount = document.getElementById("billing-amount");
       const billingCurrency = document.getElementById("billing-currency");
@@ -776,12 +786,22 @@
       function collectSendPayload() {
         return {
           idProcess: Number(idProcess.value || 10),
+          biometricRequired: String(biometricRequired.value || "1"),
           billingMode: String(billingMode.value || "ORG_BALANCE"),
           billingAmount: String(billingAmount.value || "0.00"),
           billingCurrency: String(billingCurrency.value || "USD").trim().toUpperCase() || "USD",
           paymentReference: String(paymentReference.value || "").trim(),
           forceResend: !!forceResend.checked,
         };
+      }
+
+      async function readApiResponse(res) {
+        const raw = await res.text();
+        try {
+          return raw ? JSON.parse(raw) : {};
+        } catch (error) {
+          return { error: raw || `HTTP ${res.status}` };
+        }
       }
 
       async function sendBatchToSign() {
@@ -810,7 +830,7 @@
             headers: { "content-type": "application/json" },
             body: JSON.stringify(collectSendPayload()),
           });
-          const data = await res.json();
+          const data = await readApiResponse(res);
           if (!res.ok) {
             pageMessage.textContent = data.error === "already_sent"
               ? "Este lote ya fue enviado. Si deseas repetirlo, activa el control de reenvio."

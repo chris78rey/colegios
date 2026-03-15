@@ -1613,11 +1613,15 @@ async function createRealOmniRequestsForDesktopBatch(batchId, options = {}) {
 
     let omniRequest = null;
     try {
+      const biometricRequired =
+        options.biometricRequired !== undefined
+          ? normalizeOmniFlag(options.biometricRequired)
+          : omniBiometricRequired;
       const createdPayload = await omniPost("SolicitudeCreate", {
         IdProcess: getOmniProcessId(options.idProcess),
         PaymentRequired: billing.paymentRequired ? 1 : 0,
         amount: billing.paymentRequired ? billing.billingAmount : "0",
-        BiometricRequired: omniBiometricRequired,
+        BiometricRequired: biometricRequired,
       });
       assertOmniSuccess(createdPayload, "omni_request_create_failed");
       const providerRequestId = String(createdPayload.IdSolicitud || createdPayload.IDSolicitud || "").trim();
@@ -1940,18 +1944,40 @@ function buildSignatoryFromKeys(
   }
 ) {
   const idNumber = pickRowValue(row, idKeys);
-  const firstName = pickRowValue(row, firstNameKeys);
-  const middleName = pickRowValue(row, middleNameKeys);
-  const lastName = pickRowValue(row, lastNameKeys);
-  const secondLastName = pickRowValue(row, secondLastNameKeys);
-  const fullName =
+  let firstName = pickRowValue(row, firstNameKeys);
+  let middleName = pickRowValue(row, middleNameKeys);
+  let lastName = pickRowValue(row, lastNameKeys);
+  let secondLastName = pickRowValue(row, secondLastNameKeys);
+  const sourceFullName =
     [firstName, middleName, lastName, secondLastName].filter(Boolean).join(" ").trim() ||
     pickRowValue(row, fullNameKeys);
+  if (sourceFullName && (!firstName || !lastName)) {
+    const split = splitPersonName(sourceFullName);
+    const nameParts = String(split.names || "").split(/\s+/).filter(Boolean);
+    const lastNameParts = String(split.lastNames || "").split(/\s+/).filter(Boolean);
+    if (!firstName) firstName = nameParts[0] || "";
+    if (!middleName) middleName = nameParts.slice(1).join(" ");
+    if (!lastName) lastName = lastNameParts[0] || "";
+    if (!secondLastName) secondLastName = lastNameParts.slice(1).join(" ");
+  }
+  const fullName = [firstName, middleName, lastName, secondLastName].filter(Boolean).join(" ").trim() || sourceFullName;
   const email = pickRowValue(row, emailKeys);
   const phone = pickRowValue(row, phoneKeys);
   const sanitizedPhone = sanitizePhone(phone);
   if (!idNumber && !fullName && !email && !phone) return null;
-  return { idNumber, fullName, phone, email, sanitizedPhone, role, isPrimary };
+  return {
+    idNumber,
+    firstName,
+    middleName,
+    lastName,
+    secondLastName,
+    fullName,
+    phone: sanitizedPhone || phone,
+    email,
+    sanitizedPhone,
+    role,
+    isPrimary,
+  };
 }
 
 function buildPrefixedSignatory(row, prefix, role, isPrimary) {
@@ -2778,6 +2804,7 @@ const server = http.createServer((req, res) => {
           billingMode: body.billingMode,
           billingAmount: body.billingAmount,
           billingCurrency: body.billingCurrency,
+          biometricRequired: body.biometricRequired,
           paymentReference: body.paymentReference,
           forceResend: !!body.forceResend,
         }) : createRealOmniRequestsForDesktopBatch(batchId, {
@@ -2785,6 +2812,7 @@ const server = http.createServer((req, res) => {
           billingMode: body.billingMode,
           billingAmount: body.billingAmount,
           billingCurrency: body.billingCurrency,
+          biometricRequired: body.biometricRequired,
           paymentReference: body.paymentReference,
           forceResend: !!body.forceResend,
         }));
