@@ -113,15 +113,16 @@ services:
     logging: *default-logging
 
   web:
-    image: nginx:1.27-alpine
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    image: ${WEB_IMAGE:-colegios_web:local}
     restart: unless-stopped
     env_file:
       - ./env/.env
     depends_on:
       api:
         condition: service_healthy
-    volumes:
-      - ./web:/usr/share/nginx/html:ro
     networks:
       - internal
       - public
