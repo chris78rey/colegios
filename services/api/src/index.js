@@ -1499,10 +1499,30 @@ async function processRealOmniRequest(omniRequestId) {
       .filter(([key]) => key)
   );
 
+  // DEBUG: log what OmniSwitch returned vs what we have stored
+  console.log("[OMNI-POLL] IDSolicitud:", getOmniRequestNumericId(omniRequest));
+  console.log("[OMNI-POLL] Documentos devueltos por OmniSwitch:", JSON.stringify(
+    statusData.documents.map((d) => ({
+      DocAFirmar: d?.DocAFirmar,
+      NombreDocumento: d?.NombreDocumento,
+      DocFirmado: d?.DocFirmado,
+    }))
+  ));
+  console.log("[OMNI-POLL] Documentos en DB:", JSON.stringify(
+    (omniRequest.documents || []).map((d) => ({
+      providerDocumentName: d.providerDocumentName,
+      providerSignedFlag: d.providerSignedFlag,
+    }))
+  ));
+
   for (const document of omniRequest.documents || []) {
     const providerDocument = documentsByName.get(String(document.providerDocumentName || "").trim());
-    if (!providerDocument) continue;
+    if (!providerDocument) {
+      console.log("[OMNI-POLL] SIN COINCIDENCIA para documento DB:", document.providerDocumentName);
+      continue;
+    }
     const signedFlag = normalizeOmniFlag(providerDocument.DocFirmado);
+    console.log("[OMNI-POLL] Coincidencia encontrada:", document.providerDocumentName, "-> DocFirmado:", providerDocument.DocFirmado, "-> signedFlag:", signedFlag);
     const nextStatus = signedFlag === "1" ? "SIGNED" : "UPLOADED";
     const wasSigned = normalizeOmniFlag(document.providerSignedFlag) === "1";
     await prisma.omniDocument.update({
