@@ -62,29 +62,40 @@ Main files:
   - `storage/rc-validations/<organizationId>/<runId>/`
 
 ## Current Result Model
+- Identity validation now hits the real Registro Civil API (OmniSwitch `QueryRC`).
+- The call is done over a server-to-server proxy pattern (`fetchQueryRC`) to bypass frontend CORS and IP whitelist restrictions.
 - Identity comparison statuses:
-  - `MATCH`
-  - `CORRECTABLE`
-  - `REVIEW`
-  - `ERROR`
+  - `MATCH` (API call succeeded and returned data)
+  - `ERROR` (API call failed or Cedula not found)
 - Every row also carries OmniSwitch readiness:
   - `omniReady`
   - `omniIssues[]`
+- The API result includes demographic data extracted from RC:
+  - `rcData.profesion`
+  - `rcData.estadoCivil`
+  - `rcData.nacionalidad`
 - The UI must show both:
-  - identity status
+  - extracted real name and demographics
   - OmniSwitch checklist result
 
 ## Corrected Excel Rules
 - Never mutate the uploaded source file in place.
-- Always generate a corrected copy.
-- Always append audit columns:
-  - `nombre_completo_original`
+- Always generate a corrected copy and process it asynchronously.
+- Note on Array Offset: When inserting data into the output worksheet (`correctedMatrix`), use `matrixIndex = rowOffset + 1` (since index 0 is the header). Do NOT use `excelRowNumber` (which is `rowOffset + 2`) for array insertion to avoid off-by-one desynchronization!
+- Always append these audit columns containing real RC data:
   - `nombre_completo_validado`
   - `estado_validacion`
   - `observacion_validacion`
-- If a row is `CORRECTABLE` and copy generation is enabled:
-  - update the corrected copy
-  - split official names back into the standard columns when available
+  - `PrimerNombre_RC`
+  - `Apellidos_RC`
+  - `Profesion`
+  - `EstadoCivil`
+  - `Nacionalidad`
+- If a row is a `MATCH`:
+  - forcefully inject the official RC names back into the standard name columns of the Excel.
+  - populate the demographic audit columns.
+- If a row is an `ERROR`:
+  - demographic columns must remain blank to avoid polluting the output.
 
 ## OmniSwitch Preflight Rules
 - Identity validation is not enough; preflight check these fields too:
@@ -113,23 +124,18 @@ Main files:
 - In the API:
   - reject missing org/file with `400`
   - reject unknown organization with `404`
-  - reject unreadable/unsupported Excel structure with clear error text
+  - intercept RC proxy errors and return graceful `ERROR` statuses per row rather than crashing the loop.
 
 ## Web Admin Pattern
 - `apiBase` must target the API service, not blindly reuse the web origin.
 - When served from `:5173`, point API requests to `:8080`.
-- Keep the page navigable from:
-  - `upload.html`
-  - `history.html`
-  - `signing.html`
+- The Cedula validation UI must remain simple, highlighting extracted demographics without redundant "compare options".
 
 ## Architecture Rule
-- Keep external identity logic in API, not in the static frontend.
-- The current provider response is simulated in API to validate the workflow.
-- When replacing mock with real provider integration:
-  - preserve the normalized result contract
-  - do not break the web page shape
-  - keep corrected Excel generation unchanged
+- External identity logic lives tightly in the backend API.
+- We act as a middleman Proxy to OmniSwitch.
+- Do not expose the real OmniSwitch provider credentials to the frontend.
+- Rely on the `detectRcColumns` fuzzy-match utility to capture incoming Cedula columns regardless of typos in their headers.
 
 ## If You Extend This Flow
 - If the user asks for persistence/history beyond file storage, then consider DB modeling.
