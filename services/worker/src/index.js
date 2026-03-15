@@ -3,7 +3,6 @@ import crypto from "node:crypto";
 
 const port = process.env.PORT || 8081;
 const apiBase = process.env.API_BASE_URL || "http://api:8080";
-const omniSwitchMode = String(process.env.OMNISWITCH_MODE || "mock").trim().toLowerCase();
 const serviceVersion = process.env.APP_VERSION || "dev";
 
 async function processPendingBatches() {
@@ -45,7 +44,6 @@ async function processPendingBatchGroups() {
 }
 
 async function processPendingOmniRequests() {
-  if (omniSwitchMode !== "mock") return;
   try {
     const res = await fetch(`${apiBase}/v1/omni-requests`);
     const data = await res.json();

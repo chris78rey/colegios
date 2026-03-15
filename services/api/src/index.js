@@ -17,6 +17,11 @@ const examplesPath = path.join(process.cwd(), "plantillas", "ejemplos");
 const desktopWebTokenSecret = process.env.DESKTOP_WEB_TOKEN_SECRET || "desktop-web-token-dev-secret";
 const omniSwitchMode = String(process.env.OMNISWITCH_MODE || "mock").trim().toLowerCase();
 const omniSwitchProvider = "OMNISWITCH";
+const omniSwitchApiUrl = String(
+  process.env.OMNISWITCH_API_URL || process.env.FIRMALO_URL_BASE || "https://wsrest.firmalo.ai/api/v1"
+).trim().replace(/\/+$/, "");
+const omniSwitchUser = String(process.env.OMNISWITCH_USER || process.env.FIRMALO_USER || "").trim();
+const omniSwitchPassword = String(process.env.OMNISWITCH_PASSWORD || process.env.FIRMALO_PASSWORD || "").trim();
 const omniDefaultCountryId = Number(process.env.OMNISWITCH_DEFAULT_COUNTRY_ID || 19);
 const omniDefaultProvinceId = Number(process.env.OMNISWITCH_DEFAULT_PROVINCE_ID || 17);
 const omniDefaultCityId = Number(process.env.OMNISWITCH_DEFAULT_CITY_ID || 1701);
@@ -918,6 +923,111 @@ function getMockSignedFilePath(organizationId, omniRequestId, providerDocumentNa
   return path.join(storagePath, "omniswitch", organizationId, omniRequestId, safeName);
 }
 
+function isMockOmniMode() {
+  return omniSwitchMode === "mock";
+}
+
+function getOmniCredentials() {
+  return {
+    UserName: omniSwitchUser,
+    Password: omniSwitchPassword,
+  };
+}
+
+function assertOmniRealConfig() {
+  if (!omniSwitchApiUrl) throw new Error("omni_missing_api_url");
+  if (!omniSwitchUser) throw new Error("omni_missing_user");
+  if (!omniSwitchPassword) throw new Error("omni_missing_password");
+}
+
+function getOmniRequestNumericId(omniRequest) {
+  const providerRequestId = String(omniRequest?.providerRequestId || "").trim();
+  if (!providerRequestId) throw new Error("omni_missing_provider_request_id");
+  const numericId = Number(providerRequestId);
+  if (!Number.isFinite(numericId)) throw new Error("omni_invalid_provider_request_id");
+  return numericId;
+}
+
+function getOmniResultCode(payload) {
+  if (!payload || typeof payload !== "object") return null;
+  if (!Object.prototype.hasOwnProperty.call(payload, "resultCode")) return null;
+  const numeric = Number(payload.resultCode);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function getOmniResultText(payload) {
+  if (!payload || typeof payload !== "object") return "";
+  return String(payload.resultText || payload.message || payload.error || "").trim();
+}
+
+function normalizeOmniProviderPayload(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === "object") return payload;
+  return { raw: payload };
+}
+
+async function omniPost(endpoint, payload) {
+  assertOmniRealConfig();
+  const response = await fetch(`${omniSwitchApiUrl}/${endpoint}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      ...getOmniCredentials(),
+      ...payload,
+    }),
+  });
+  const rawText = await response.text();
+  let parsed;
+  try {
+    parsed = rawText ? JSON.parse(rawText) : {};
+  } catch {
+    parsed = { raw: rawText };
+  }
+  if (!response.ok) {
+    const error = new Error(`omni_http_${response.status}`);
+    error.status = response.status;
+    error.payload = parsed;
+    throw error;
+  }
+  return normalizeOmniProviderPayload(parsed);
+}
+
+function assertOmniSuccess(payload, fallbackMessage = "omni_provider_error") {
+  const resultCode = getOmniResultCode(payload);
+  if (resultCode === null || resultCode === 0) return;
+  const error = new Error(getOmniResultText(payload) || fallbackMessage);
+  error.payload = payload;
+  error.resultCode = resultCode;
+  throw error;
+}
+
+function normalizeOmniCollection(value) {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === "object") return [value];
+  return [];
+}
+
+function parseOmniStatusPayload(payload) {
+  const root = Array.isArray(payload) ? payload[0] : payload;
+  if (!root || typeof root !== "object") {
+    return { root: {}, documents: [], signatories: [] };
+  }
+  return {
+    root,
+    documents: normalizeOmniCollection(root.Solicitudes_Documentos || root.Documentos),
+    signatories: normalizeOmniCollection(root.Solicitudes_Firmantes || root.Firmantes),
+  };
+}
+
+function getOmniDocumentSignedPath(organizationId, omniRequestId, providerDocumentName) {
+  const safeName = path.basename(String(providerDocumentName || "documento.pdf"));
+  return path.join(storagePath, "omniswitch", organizationId, omniRequestId, "signed", safeName);
+}
+
+function encodePdfBase64(filePath) {
+  return fs.readFileSync(filePath).toString("base64");
+}
+
 async function createOmniEvent(omniRequestId, type, { omniDocumentId = null, message = "", metaJson = null } = {}) {
   return prisma.omniEvent.create({
     data: {
@@ -1286,6 +1396,323 @@ async function createMockOmniRequestsForDesktopBatch(batchId, options = {}) {
     });
     created.push(omniRequest);
   }
+  return { items: created, status: 201 };
+}
+
+async function downloadRealOmniDocument(omniDocument) {
+  const omniRequest = await prisma.omniRequest.findUnique({ where: { id: omniDocument.omniRequestId } });
+  if (!omniRequest) throw new Error("omni_request_not_found");
+  const providerDocumentName = String(omniDocument.providerDocumentName || "").trim();
+  if (!providerDocumentName) throw new Error("omni_missing_document_name");
+  const payload = await omniPost("SolicitudeGetDocument", {
+    IDSolicitud: getOmniRequestNumericId(omniRequest),
+    NombreDocumento: providerDocumentName,
+  });
+  assertOmniSuccess(payload, "omni_document_download_failed");
+  const pdfBase64 = String(payload.DocumentoBase64 || "").trim();
+  if (!pdfBase64) throw new Error("omni_missing_signed_document");
+  const signedPath = getOmniDocumentSignedPath(omniRequest.organizationId, omniRequest.id, providerDocumentName);
+  ensureDir(path.dirname(signedPath));
+  fs.writeFileSync(signedPath, Buffer.from(pdfBase64, "base64"));
+  const updated = await prisma.omniDocument.update({
+    where: { id: omniDocument.id },
+    data: {
+      signedPdfPath: signedPath,
+      downloadedAt: new Date(),
+      status: "DOWNLOADED",
+      lastResultCode: getOmniResultCode(payload) ?? 0,
+      lastResultText: getOmniResultText(payload) || "Operacion correcta",
+    },
+  });
+  await createOmniEvent(omniRequest.id, "DOWNLOAD_OK", {
+    omniDocumentId: omniDocument.id,
+    message: "OmniSwitch signed document downloaded",
+    metaJson: { providerDocumentName, signedPdfPath: signedPath },
+  });
+  return updated;
+}
+
+async function processRealOmniRequest(omniRequestId) {
+  const omniRequest = await prisma.omniRequest.findUnique({
+    where: { id: omniRequestId },
+    include: { documents: true },
+  });
+  if (!omniRequest) return null;
+
+  const payload = await omniPost("GetSolicitudByID", {
+    IDSolicitud: getOmniRequestNumericId(omniRequest),
+  });
+  assertOmniSuccess(payload, "omni_status_failed");
+  const statusData = parseOmniStatusPayload(payload);
+  const documentsByName = new Map(
+    statusData.documents
+      .map((item) => [String(item?.DocAFirmar || item?.NombreDocumento || "").trim(), item])
+      .filter(([key]) => key)
+  );
+
+  for (const document of omniRequest.documents || []) {
+    const providerDocument = documentsByName.get(String(document.providerDocumentName || "").trim());
+    if (!providerDocument) continue;
+    const signedFlag = normalizeOmniFlag(providerDocument.DocFirmado);
+    const nextStatus = signedFlag === "1" ? "SIGNED" : "UPLOADED";
+    const wasSigned = normalizeOmniFlag(document.providerSignedFlag) === "1";
+    await prisma.omniDocument.update({
+      where: { id: document.id },
+      data: {
+        providerSignedFlag: signedFlag,
+        status: nextStatus,
+        lastResultCode: getOmniResultCode(payload) ?? 0,
+        lastResultText: getOmniResultText(payload) || "Operacion correcta",
+      },
+    });
+    if (!wasSigned && signedFlag === "1") {
+      await createOmniEvent(omniRequest.id, "POLL_SIGNED", {
+        omniDocumentId: document.id,
+        message: "OmniSwitch document signed",
+        metaJson: { providerDocumentName: document.providerDocumentName },
+      });
+    }
+  }
+
+  const refreshed = await prisma.omniRequest.findUnique({
+    where: { id: omniRequestId },
+    include: { documents: true },
+  });
+  if (!refreshed) return null;
+
+  for (const document of refreshed.documents || []) {
+    if (normalizeOmniFlag(document.providerSignedFlag) === "1" && !document.signedPdfPath) {
+      await downloadRealOmniDocument(document);
+    }
+  }
+
+  await prisma.omniRequest.update({
+    where: { id: omniRequestId },
+    data: {
+      lastPolledAt: new Date(),
+      lastResultCode: getOmniResultCode(payload) ?? 0,
+      lastResultText: getOmniResultText(payload) || "Operacion correcta",
+    },
+  });
+
+  return syncOmniRequestStatus(omniRequestId);
+}
+
+async function createRealOmniRequestsForDesktopBatch(batchId, options = {}) {
+  assertOmniRealConfig();
+  const desktopBatch = await prisma.desktopBatch.findUnique({
+    where: { id: batchId },
+    include: { documents: { orderBy: [{ rowIndex: "asc" }, { createdAt: "asc" }] } },
+  });
+  if (!desktopBatch) {
+    return { error: "batch_not_found", status: 404 };
+  }
+  const readyDocuments = (desktopBatch.documents || []).filter((doc) => doc.status === "READY" && doc.pdfPath);
+  if (!readyDocuments.length) {
+    return { error: "no_ready_documents", status: 400 };
+  }
+
+  const grouped = new Map();
+  for (const document of readyDocuments) {
+    const groupKey = `${document.rowIndex}::${document.groupKey || ""}`;
+    if (!grouped.has(groupKey)) grouped.set(groupKey, []);
+    grouped.get(groupKey).push(document);
+  }
+
+  const created = [];
+  for (const documents of grouped.values()) {
+    const firstDoc = documents[0];
+    const existing = await prisma.omniRequest.findFirst({
+      where: {
+        desktopBatchId: desktopBatch.id,
+        requestGroupId: null,
+        documents: {
+          some: {
+            desktopDocumentId: firstDoc.id,
+          },
+        },
+      },
+    });
+    if (existing && !options.forceResend) {
+      return {
+        error: "already_sent",
+        status: 409,
+        existingRequestId: existing.id,
+        existingProviderRequestId: existing.providerRequestId || null,
+      };
+    }
+
+    const signatories = buildSignatoriesForTemplate(OMNISWITCH_FIELDS, firstDoc.rowJson || {});
+    if (!signatories.length) {
+      return { error: "missing_signatories", status: 400 };
+    }
+    const billing = await resolveOmniBillingForDocuments(desktopBatch.organizationId, documents, options);
+    if (billing?.error) {
+      return { error: billing.error, status: 400 };
+    }
+
+    let omniRequest = null;
+    try {
+      const createdPayload = await omniPost("SolicitudeCreate", {
+        IdProcess: getOmniProcessId(options.idProcess),
+        PaymentRequired: billing.paymentRequired ? 1 : 0,
+        amount: billing.paymentRequired ? billing.billingAmount : "0",
+        BiometricRequired: String(process.env.OMNISWITCH_BIOMETRIC_REQUIRED || "1"),
+        IDClienteTrx: firstDoc.id,
+      });
+      assertOmniSuccess(createdPayload, "omni_request_create_failed");
+      const providerRequestId = String(createdPayload.IdSolicitud || createdPayload.IDSolicitud || "").trim();
+      if (!providerRequestId) {
+        throw new Error("omni_missing_request_id");
+      }
+
+      omniRequest = await prisma.omniRequest.create({
+        data: {
+          organizationId: desktopBatch.organizationId,
+          desktopBatchId: desktopBatch.id,
+          provider: omniSwitchProvider,
+          providerRequestId,
+          status: "CREATED",
+          billingMode: billing.billingMode,
+          billingAmount: billing.billingAmount,
+          billingCurrency: billing.billingCurrency,
+          paymentRequired: billing.paymentRequired,
+          paymentReference: billing.paymentReference || null,
+          paymentStatus: billing.paymentStatus,
+          idProcess: getOmniProcessId(options.idProcess),
+          documentCount: documents.length,
+          signatoryCount: signatories.length,
+          lastProviderStatus: "CREATED",
+          lastResultCode: getOmniResultCode(createdPayload) ?? 0,
+          lastResultText: getOmniResultText(createdPayload) || "Operacion correcta",
+        },
+      });
+
+      await createOmniEvent(omniRequest.id, "CREATE_REQUEST_OK", {
+        message: "OmniSwitch request created",
+        metaJson: { providerRequestId, billing, forceResend: !!options.forceResend },
+      });
+
+      for (const document of documents) {
+        if (!document.pdfPath || !fs.existsSync(document.pdfPath)) {
+          throw new Error("omni_local_pdf_missing");
+        }
+        const placement = resolveOmniSignaturePlacement(document.rowJson || {}, signatories.length);
+        const providerDocumentName = path.basename(document.outputName || path.basename(document.pdfPath));
+        const uploadPayload = await omniPost("SolicitudeCreateDocument", {
+          IDSolicitud: Number(providerRequestId),
+          NombreDocumento: providerDocumentName,
+          DocumentoBase64: encodePdfBase64(document.pdfPath),
+          numeroPagina: placement.numeroPagina,
+          Coordenadas: placement.Coordenadas,
+        });
+        assertOmniSuccess(uploadPayload, "omni_document_upload_failed");
+        const createdDocument = await prisma.omniDocument.create({
+          data: {
+            omniRequestId: omniRequest.id,
+            desktopDocumentId: document.id,
+            providerDocumentName,
+            localPdfPath: document.pdfPath,
+            status: "UPLOADED",
+            providerSignedFlag: "0",
+            fileSizeBytes: fs.existsSync(document.pdfPath) ? fs.statSync(document.pdfPath).size : null,
+            lastResultCode: getOmniResultCode(uploadPayload) ?? 0,
+            lastResultText: getOmniResultText(uploadPayload) || "Operacion correcta",
+          },
+        });
+        await createOmniEvent(omniRequest.id, "DOC_UPLOAD_OK", {
+          omniDocumentId: createdDocument.id,
+          message: "OmniSwitch document uploaded",
+          metaJson: {
+            providerDocumentName,
+            numeroPagina: placement.numeroPagina,
+            Coordenadas: placement.Coordenadas,
+            autoCalculated: placement.autoCalculated,
+          },
+        });
+      }
+
+      for (const signatory of signatories) {
+        const signatoryPayload = await omniPost("SolicitudeCreateSignatory", {
+          IDSolicitud: Number(providerRequestId),
+          Cedula: signatory.idNumber,
+          PrimerNombre: normalizeOmniPersonName(signatory.firstName),
+          SegunNombre: normalizeOmniPersonName(signatory.middleName),
+          PrimerApellido: normalizeOmniPersonName(signatory.lastName),
+          SegApellido: normalizeOmniPersonName(signatory.secondLastName),
+          Celular: signatory.phone,
+          Email: signatory.email,
+          FirmaPrincipal: signatory.isPrimary ? 1 : 0,
+          IdPais: parseIntSafe(firstDoc.rowJson?.IdPais, omniDefaultCountryId),
+          IdProvincia: parseIntSafe(firstDoc.rowJson?.IdProvincia, omniDefaultProvinceId),
+          IdCiudad: parseIntSafe(firstDoc.rowJson?.IdCiudad, omniDefaultCityId),
+          Direccion: String(firstDoc.rowJson?.Direccion || process.env.OMNISWITCH_DEFAULT_DIRECCION || "Ciudad").trim(),
+        });
+        assertOmniSuccess(signatoryPayload, "omni_signatory_create_failed");
+      }
+
+      await createOmniEvent(omniRequest.id, "SIGNATORIES_OK", {
+        message: "OmniSwitch signatories registered",
+        metaJson: {
+          signatories: signatories.map((signatory) => ({
+            idNumber: signatory.idNumber,
+            fullName: normalizeOmniPersonName(signatory.fullName),
+            email: signatory.email,
+            phone: signatory.phone,
+            isPrimary: signatory.isPrimary,
+          })),
+        },
+      });
+
+      const sendPayload = await omniPost("SolicitudeSend", {
+        IDSolicitud: Number(providerRequestId),
+      });
+      assertOmniSuccess(sendPayload, "omni_send_failed");
+
+      const updatedRequest = await prisma.omniRequest.update({
+        where: { id: omniRequest.id },
+        data: {
+          status: "SENT",
+          sentAt: new Date(),
+          lastPolledAt: new Date(),
+          lastProviderStatus: "SENT",
+          lastResultCode: getOmniResultCode(sendPayload) ?? 0,
+          lastResultText: getOmniResultText(sendPayload) || "Operacion correcta",
+        },
+      });
+
+      await createOmniEvent(omniRequest.id, "SEND_OK", {
+        message: "OmniSwitch request sent",
+        metaJson: { providerRequestId },
+      });
+      created.push(updatedRequest);
+    } catch (error) {
+      if (omniRequest?.id) {
+        await prisma.omniRequest.update({
+          where: { id: omniRequest.id },
+          data: {
+            status: "ERROR",
+            lastProviderStatus: "ERROR",
+            lastResultCode: error.resultCode ?? error.status ?? 500,
+            lastResultText: getOmniResultText(error.payload) || error.message || "omni_error",
+          },
+        });
+        await createOmniEvent(omniRequest.id, "ERROR", {
+          message: "OmniSwitch request failed",
+          metaJson: {
+            error: error.message,
+            resultCode: error.resultCode ?? null,
+            payload: error.payload || null,
+          },
+        });
+      }
+      return {
+        error: error.message || "omni_request_failed",
+        status: error.status || 502,
+      };
+    }
+  }
+
   return { items: created, status: 201 };
 }
 
@@ -2284,20 +2711,24 @@ const server = http.createServer((req, res) => {
   if (pathOnly.startsWith("/v1/desktop-batches/") && pathOnly.endsWith("/omni/send") && method === "POST") {
     return (async () => {
       try {
-        if (omniSwitchMode !== "mock") {
-          return json(res, 400, { error: "omni_mock_only" });
-        }
         const batchId = pathOnly.split("/")[3];
         if (!batchId) return json(res, 400, { error: "missing_batch_id" });
         const body = await readJson(req);
-        const result = await createMockOmniRequestsForDesktopBatch(batchId, {
+        const result = await (isMockOmniMode() ? createMockOmniRequestsForDesktopBatch(batchId, {
           idProcess: body.idProcess,
           billingMode: body.billingMode,
           billingAmount: body.billingAmount,
           billingCurrency: body.billingCurrency,
           paymentReference: body.paymentReference,
           forceResend: !!body.forceResend,
-        });
+        }) : createRealOmniRequestsForDesktopBatch(batchId, {
+          idProcess: body.idProcess,
+          billingMode: body.billingMode,
+          billingAmount: body.billingAmount,
+          billingCurrency: body.billingCurrency,
+          paymentReference: body.paymentReference,
+          forceResend: !!body.forceResend,
+        }));
         if (result.error) return json(res, result.status || 400, { error: result.error });
         return json(res, result.status || 201, {
           mode: omniSwitchMode,
@@ -2316,7 +2747,7 @@ const server = http.createServer((req, res) => {
           })),
         });
       } catch (error) {
-        console.error("Desktop batch Omni mock send failed:", error);
+        console.error("Desktop batch Omni send failed:", error);
         return json(res, 500, { error: "desktop_batch_omni_send_failed" });
       }
     })();
@@ -2402,8 +2833,7 @@ const server = http.createServer((req, res) => {
       try {
         const omniRequestId = pathOnly.split("/")[3];
         if (!omniRequestId) return json(res, 400, { error: "missing_omni_request_id" });
-        if (omniSwitchMode !== "mock") return json(res, 400, { error: "omni_mock_only" });
-        const updated = await processMockOmniRequest(omniRequestId);
+        const updated = await (isMockOmniMode() ? processMockOmniRequest(omniRequestId) : processRealOmniRequest(omniRequestId));
         if (!updated) return json(res, 404, { error: "omni_request_not_found" });
         return json(res, 200, { mode: omniSwitchMode, item: updated });
       } catch (error) {
