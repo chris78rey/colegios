@@ -988,6 +988,16 @@ function normalizeOmniProviderPayload(payload) {
   return { raw: payload };
 }
 
+function isOmniSuccessPayload(payload, options = {}) {
+  const resultCode = getOmniResultCode(payload);
+  if (resultCode === null || resultCode === 0) return true;
+  const resultText = getOmniResultText(payload).toLowerCase();
+  if (options.allowSendResultCodeOne && resultCode === 1 && resultText.includes("enviado correctamente")) {
+    return true;
+  }
+  return false;
+}
+
 function logOmniDebug(event, meta = {}) {
   if (!omniDebugEnabled) return;
   console.info(
@@ -1042,9 +1052,9 @@ async function omniPost(endpoint, payload) {
   return normalizeOmniProviderPayload(parsed);
 }
 
-function assertOmniSuccess(payload, fallbackMessage = "omni_provider_error") {
+function assertOmniSuccess(payload, fallbackMessage = "omni_provider_error", options = {}) {
   const resultCode = getOmniResultCode(payload);
-  if (resultCode === null || resultCode === 0) return;
+  if (isOmniSuccessPayload(payload, options)) return;
   const error = new Error(getOmniResultText(payload) || fallbackMessage);
   error.payload = payload;
   error.resultCode = resultCode;
@@ -1716,7 +1726,7 @@ async function createRealOmniRequestsForDesktopBatch(batchId, options = {}) {
       const sendPayload = await omniPost("SolicitudeSend", {
         IDSolicitud: Number(providerRequestId),
       });
-      assertOmniSuccess(sendPayload, "omni_send_failed");
+      assertOmniSuccess(sendPayload, "omni_send_failed", { allowSendResultCodeOne: true });
 
       const updatedRequest = await prisma.omniRequest.update({
         where: { id: omniRequest.id },

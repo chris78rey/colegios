@@ -105,6 +105,7 @@ Referencia: leer `references/omniswitch-steps.md`.
 - El nombre canonico del documento en consulta es `DocAFirmar`; ese mismo valor debe usarse luego como `NombreDocumento` para descargar.
 - `IdPais`, `IdProvincia` e `IdCiudad` son IDs internos del proveedor, no codigos telefonicos ni ISO.
 - `QueryRC` responde exito real cuando `resultCode == "0"`, no solo por HTTP.
+- Excepcion confirmada en proveedor actual: `SolicitudeSend` puede responder exito con `HTTP 200`, `resultCode = 1` y texto `Solicitud enviado correctamente`. No tratar ese caso como error.
 
 ## Regla explicita para multiples PDFs y multiples firmantes
 
