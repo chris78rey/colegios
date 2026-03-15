@@ -368,13 +368,7 @@
         return `<span class="rounded-full px-3 py-1 text-xs font-semibold ${styles[status] || "bg-slate-100 text-slate-700"}">${escapeHtml(status)}</span>`;
       }
 
-      const apiBase =
-        window.API_BASE_URL ||
-        (window.location.port === "5173"
-          ? `${window.location.protocol}//${window.location.hostname}:8080`
-          : (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-            ? "http://localhost:8080"
-            : window.location.origin));
+      const apiBase = window.API_BASE_URL || window.location.origin;
 
       const auth = requireAuth(["ADMIN"]);
       const userEmail = document.getElementById("user-email");

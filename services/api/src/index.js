@@ -14,7 +14,7 @@ const corsOrigin = process.env.CORS_ORIGIN || "*";
 const prisma = new PrismaClient();
 const storagePath = process.env.STORAGE_PATH || path.join(process.cwd(), "data", "storage");
 const examplesPath = path.join(process.cwd(), "plantillas", "ejemplos");
-const desktopWebTokenSecret = process.env.DESKTOP_WEB_TOKEN_SECRET || "desktop-web-token-dev-secret";
+const desktopWebTokenSecret = resolveDesktopWebTokenSecret();
 const omniSwitchMode = String(process.env.OMNISWITCH_MODE || "mock").trim().toLowerCase();
 const omniSwitchProvider = "OMNISWITCH";
 const omniSwitchApiUrl = String(
@@ -29,6 +29,15 @@ const omniDefaultProvinceId = Number(process.env.OMNISWITCH_DEFAULT_PROVINCE_ID 
 const omniDefaultCityId = Number(process.env.OMNISWITCH_DEFAULT_CITY_ID || 1701);
 const omniMockAutoSignMs = Math.max(0, Number(process.env.OMNISWITCH_MOCK_AUTO_SIGN_MS) || 0);
 const serviceVersion = process.env.APP_VERSION || "dev";
+
+function resolveDesktopWebTokenSecret() {
+  const secret = String(process.env.DESKTOP_WEB_TOKEN_SECRET || "").trim();
+  if (secret) return secret;
+  if (String(process.env.NODE_ENV || "").trim().toLowerCase() === "production") {
+    throw new Error("missing_DESKTOP_WEB_TOKEN_SECRET");
+  }
+  return "desktop-web-token-dev-secret";
+}
 
 function json(res, status, body) {
   res.writeHead(status, { "content-type": "application/json" });
@@ -267,8 +276,10 @@ async function runInChunks(items, chunkSize, handler) {
 }
 
 function safeResolvePath(baseDir, targetPath) {
-  const resolved = path.resolve(baseDir, targetPath);
-  if (!resolved.startsWith(baseDir)) {
+  const resolvedBase = path.resolve(baseDir);
+  const resolved = path.resolve(resolvedBase, targetPath);
+  const relative = path.relative(resolvedBase, resolved);
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) {
     throw new Error("invalid_path");
   }
   return resolved;
@@ -312,7 +323,14 @@ function verifyDesktopWebToken(token) {
     .createHmac("sha256", desktopWebTokenSecret)
     .update(body)
     .digest("base64url");
-  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+
+  const signatureBuf = Buffer.from(signature);
+  const expectedBuf = Buffer.from(expectedSignature);
+  if (signatureBuf.length !== expectedBuf.length) {
+    return null;
+  }
+
+  if (!crypto.timingSafeEqual(signatureBuf, expectedBuf)) {
     return null;
   }
   const payload = safeJsonParse(base64UrlDecode(body), null);
