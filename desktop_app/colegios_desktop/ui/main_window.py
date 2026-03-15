@@ -3,9 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QCloseEvent, QFont
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QFileDialog,
     QFrame,
     QGridLayout,
@@ -29,6 +30,7 @@ from ..excel_utils import load_workbook_data
 from ..models import BatchPlan, TemplateSpec, WorkbookData
 from ..pdf_generator import generate_batch_pdfs
 from ..template_utils import load_template_specs
+from ..user_settings import DEFAULT_API_BASE, ConnectionSettings, DesktopSettingsStore
 
 
 class MainWindow(QMainWindow):
@@ -36,6 +38,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.output_root = output_root
         self.output_root.mkdir(parents=True, exist_ok=True)
+        self.settings_store = DesktopSettingsStore()
+        self.connection_settings = self.settings_store.load_connection_settings()
 
         self.templates: list[TemplateSpec] = []
         self.workbook: WorkbookData | None = None
@@ -191,10 +195,12 @@ class MainWindow(QMainWindow):
         connection_form.setHorizontalSpacing(10)
         connection_form.setVerticalSpacing(10)
 
-        self.api_base_input = QLineEdit("http://localhost:8080")
+        self.api_base_input = QLineEdit(self.connection_settings.api_base)
         self.api_email_input = QLineEdit()
         self.api_password_input = QLineEdit()
         self.api_password_input.setEchoMode(QLineEdit.Password)
+        self.api_email_input.setText(self.connection_settings.email)
+        self.api_password_input.setText(self.connection_settings.password)
 
         connection_form.addWidget(QLabel("Direccion del sistema"), 0, 0)
         connection_form.addWidget(self.api_base_input, 0, 1)
@@ -203,6 +209,11 @@ class MainWindow(QMainWindow):
         connection_form.addWidget(QLabel("Contrasena"), 2, 0)
         connection_form.addWidget(self.api_password_input, 2, 1)
         connection_layout.addLayout(connection_form)
+
+        self.remember_connection_checkbox = QCheckBox("Recordar datos")
+        self.remember_connection_checkbox.setChecked(self.connection_settings.remember_connection)
+        self.remember_connection_checkbox.toggled.connect(self.on_remember_connection_toggled)
+        connection_layout.addWidget(self.remember_connection_checkbox)
 
         connection_actions = QHBoxLayout()
         self.login_btn = QPushButton("Conectar")
@@ -470,6 +481,7 @@ class MainWindow(QMainWindow):
             return
 
         self.api_session = session
+        self.persist_connection_settings()
         org_text = session.organization_id or "sin organizacion"
         self.connection_status.setText(f"Conectado como {session.email} ({org_text}).")
         self._set_status("Conexion al sistema lista.", max(self.progress.value(), 70))
@@ -514,6 +526,7 @@ class MainWindow(QMainWindow):
             )
             return
         try:
+            self.persist_connection_settings()
             web_url = open_web_history_from_desktop(
                 api_base=api_base,
                 email=email,
@@ -549,6 +562,34 @@ class MainWindow(QMainWindow):
         self.excel_value.setText(self._excel_text())
         self.generate_value.setText(self._generate_text())
         self.summary_box.setPlainText(self._build_summary_text())
+
+    def on_remember_connection_toggled(self, checked: bool) -> None:
+        if checked:
+            self.persist_connection_settings()
+            return
+
+        self.connection_settings = ConnectionSettings()
+        self.settings_store.clear_connection_settings()
+
+    def persist_connection_settings(self) -> None:
+        if not self.remember_connection_checkbox.isChecked():
+            return
+
+        settings = ConnectionSettings(
+            remember_connection=True,
+            api_base=self.api_base_input.text().strip() or DEFAULT_API_BASE,
+            email=self.api_email_input.text().strip(),
+            password=self.api_password_input.text(),
+        )
+        self.settings_store.save_connection_settings(settings)
+        self.connection_settings = settings
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        if self.remember_connection_checkbox.isChecked():
+            self.persist_connection_settings()
+        else:
+            self.settings_store.clear_connection_settings()
+        super().closeEvent(event)
 
     def _templates_text(self) -> str:
         if not self.templates:

@@ -213,3 +213,13 @@ Despues de generar los documentos:
 1. conecta la app al sistema web con URL, correo y contrasena
 2. pulsa `Subir documentos al sistema`
 3. el backend guarda el lote importado y sus PDFs preservando `row_index`, `group_key` y `template_name`
+
+## Recordar conexion local
+
+En la tarjeta `Sistema web`, la app puede recordar localmente:
+
+- URL del sistema
+- correo
+- contrasena
+
+Activa `Recordar datos` para que esos campos reaparezcan al volver a abrir la app. La configuracion se guarda por usuario en una carpeta local separada de la salida de documentos.

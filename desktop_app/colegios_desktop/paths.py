@@ -25,6 +25,16 @@ def default_output_dir() -> Path:
     return output_dir
 
 
+def default_config_dir() -> Path:
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        config_dir = Path(appdata) / "ColegiosDesktop"
+    else:
+        config_dir = Path.home() / ".colegios_desktop"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    return config_dir
+
+
 def _documents_dir() -> Path:
     home = Path.home()
     candidates = []
