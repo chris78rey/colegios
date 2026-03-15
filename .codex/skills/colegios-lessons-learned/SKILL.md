@@ -10,8 +10,8 @@ Use this skill to repeat the working setup: local compose with web + api + worke
 
 ## Workflow (quick)
 1. Local compose: ensure `.env` sets local network flags and expose ports via `docker-compose.override.yml`.
-2. Prisma: rely on Debian-based API image to avoid OpenSSL issues; run `migrate deploy` + `seed` at container start.
-3. VPS/Coolify: set `DOMAIN` + `CLIENT_ID`, ensure external network name exists, deploy API and web.
+2. Prisma: rely on Debian-based API image to avoid OpenSSL issues; run `migrate deploy` + `seed` at container start, with retry wrapper if startup race appears in Coolify.
+3. VPS/Coolify: use `compose/compose.yml` as the canonical deploy file, ensure external network name exists, and validate actual Traefik entrypoints on `coolify-proxy`.
 4. OS actions: run needed system commands yourself; if not in full control, state it explicitly before giving steps.
 5. UI debug: use `?debug=1` to surface browser errors without DevTools.
 
@@ -37,17 +37,37 @@ Use this skill to repeat the working setup: local compose with web + api + worke
 - The API container runs:
   - `npx prisma migrate deploy`
   - `node scripts/seed.js`
+- For Coolify/VPS, prefer `services/api/scripts/startup.sh` to wrap migrate with retries before seeding and starting the API.
 - If schema changes, create migration locally and commit `prisma/migrations/`.
 - Seed is idempotent (safe to run on every start).
 
 ## VPS/Coolify Notes
-- `docker-compose.yml` uses Traefik labels; set these in the VPS env:
-  - `DOMAIN=firma.da-tica.com`
-  - `CLIENT_ID=firma`
+- Canonical deploy file: `compose/compose.yml`.
+- Current public shape:
+  - web: `https://firma.da-tica.com/`
+  - api: `https://firma.da-tica.com/v1/...`
+- Required VPS env for this deploy:
+  - `WEB_DOMAIN=firma.da-tica.com`
+  - `CLIENT_ID=colegios`
+  - `TRAEFIK_DOCKER_NETWORK=coolify`
+  - `TRAEFIK_CERT_RESOLVER=letsencrypt`
 - Network config in compose:
-  - `COOLIFY_EXTERNAL_NETWORK=true`
-  - `COOLIFY_NETWORK_NAME=coolify`
+  - internal aliases must be unique:
+    - `colegios-db`
+    - `colegios-cache`
+- If `docker inspect <container> --format '{{json .Config.Labels}}'` still shows `${...}` literals, hardcode production Traefik labels instead of assuming Compose interpolation.
+- Inspect `coolify-proxy` before changing labels:
+  - current working entrypoints on this VPS are `http` and `https`
 - API image must be Debian-based (`node:20-bullseye-slim`) for Prisma OpenSSL.
+- Web must be packaged as an image with `web/Dockerfile`; do not rely on bind mounting `./web` in Coolify.
+
+## Public Fails, Internal Works
+- If `api`, `web`, `worker`, `postgres`, and `redis` are `healthy`, and local curls to `127.0.0.1:${WEB_HOST_PORT}` and `127.0.0.1:${API_HOST_PORT}/health` return `200`, treat the problem as proxy/labels/entrypoints until proven otherwise.
+- Inspect in this order:
+  - effective labels on `web` and `api`
+  - `coolify-proxy` command line
+  - `coolify-proxy` logs for router and entrypoint errors
+- Do not continue changing application code when the remaining symptom is `no available server` and internal services are already healthy.
 
 ## Recent Patterns (Auth + UI)
 - Login is email+password only; RUC removed from UI.
