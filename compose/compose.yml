@@ -52,18 +52,18 @@ services:
       - no-new-privileges:true
     labels:
       - traefik.enable=true
-      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK:-coolify}
-      - traefik.http.routers.${CLIENT_ID:-colegios}-api.rule=Host(`${WEB_DOMAIN}`) && PathPrefix(`/v1`)
-      - traefik.http.routers.${CLIENT_ID:-colegios}-api.entrypoints=websecure
-      - traefik.http.routers.${CLIENT_ID:-colegios}-api.tls=true
-      - traefik.http.routers.${CLIENT_ID:-colegios}-api.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}
-      - traefik.http.routers.${CLIENT_ID:-colegios}-api.priority=100
-      - traefik.http.services.${CLIENT_ID:-colegios}-api.loadbalancer.server.port=8080
-      - traefik.http.routers.${CLIENT_ID:-colegios}-api-http.rule=Host(`${WEB_DOMAIN}`) && PathPrefix(`/v1`)
-      - traefik.http.routers.${CLIENT_ID:-colegios}-api-http.entrypoints=web
-      - traefik.http.routers.${CLIENT_ID:-colegios}-api-http.middlewares=${CLIENT_ID}-redirect
-      - traefik.http.middlewares.${CLIENT_ID}-redirect.redirectscheme.scheme=https
-      - traefik.http.middlewares.${CLIENT_ID}-redirect.redirectscheme.permanent=true
+      - traefik.docker.network=coolify
+      - traefik.http.routers.colegios-api.rule=Host(`firma.da-tica.com`) && PathPrefix(`/v1`)
+      - traefik.http.routers.colegios-api.entrypoints=websecure
+      - traefik.http.routers.colegios-api.tls=true
+      - traefik.http.routers.colegios-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.colegios-api.priority=100
+      - traefik.http.services.colegios-api.loadbalancer.server.port=8080
+      - traefik.http.routers.colegios-api-http.rule=Host(`firma.da-tica.com`) && PathPrefix(`/v1`)
+      - traefik.http.routers.colegios-api-http.entrypoints=web
+      - traefik.http.routers.colegios-api-http.middlewares=colegios-redirect
+      - traefik.http.middlewares.colegios-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.colegios-redirect.redirectscheme.permanent=true
     logging: *default-logging
 
   worker:
@@ -143,16 +143,16 @@ services:
       - no-new-privileges:true
     labels:
       - traefik.enable=true
-      - traefik.docker.network=${TRAEFIK_DOCKER_NETWORK:-coolify}
-      - traefik.http.routers.${CLIENT_ID:-colegios}-web.rule=Host(`${WEB_DOMAIN}`)
-      - traefik.http.routers.${CLIENT_ID:-colegios}-web.entrypoints=websecure
-      - traefik.http.routers.${CLIENT_ID:-colegios}-web.tls=true
-      - traefik.http.routers.${CLIENT_ID:-colegios}-web.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}
-      - traefik.http.routers.${CLIENT_ID:-colegios}-web.priority=10
-      - traefik.http.services.${CLIENT_ID:-colegios}-web.loadbalancer.server.port=80
-      - traefik.http.routers.${CLIENT_ID:-colegios}-web-http.rule=Host(`${WEB_DOMAIN}`)
-      - traefik.http.routers.${CLIENT_ID:-colegios}-web-http.entrypoints=web
-      - traefik.http.routers.${CLIENT_ID:-colegios}-web-http.middlewares=${CLIENT_ID}-redirect
+      - traefik.docker.network=coolify
+      - traefik.http.routers.colegios-web.rule=Host(`firma.da-tica.com`)
+      - traefik.http.routers.colegios-web.entrypoints=websecure
+      - traefik.http.routers.colegios-web.tls=true
+      - traefik.http.routers.colegios-web.tls.certresolver=letsencrypt
+      - traefik.http.routers.colegios-web.priority=10
+      - traefik.http.services.colegios-web.loadbalancer.server.port=80
+      - traefik.http.routers.colegios-web-http.rule=Host(`firma.da-tica.com`)
+      - traefik.http.routers.colegios-web-http.entrypoints=web
+      - traefik.http.routers.colegios-web-http.middlewares=colegios-redirect
     logging: *default-logging
 
   postgres:
