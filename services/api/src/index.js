@@ -1492,6 +1492,8 @@ async function processRealOmniRequest(omniRequestId) {
     IDSolicitud: getOmniRequestNumericId(omniRequest),
   });
   assertOmniSuccess(payload, "omni_status_failed");
+  // DEBUG RAW: ver estructura exacta que devuelve OmniSwitch
+  console.log("[OMNI-POLL-RAW] IDSolicitud:", getOmniRequestNumericId(omniRequest), "payload:", JSON.stringify(payload).substring(0, 2000));
   const statusData = parseOmniStatusPayload(payload);
   const documentsByName = new Map(
     statusData.documents
