@@ -776,10 +776,12 @@ async function buildRcValidationRun({ workbookBuffer, filename, options = {} }) 
 
   for (let rowOffset = 0; rowOffset < rows.length; rowOffset++) {
     const row = rows[rowOffset];
-    const excelRowNumber = rowOffset + 2;
-    const sourceRow = correctedMatrix[excelRowNumber] || [];
+    const excelRowNumber = rowOffset + 2; // For display/logging (1-based + header row)
+    const matrixIndex = rowOffset + 1; // Actual array insertion index (0 is header)
+    
+    const sourceRow = correctedMatrix[matrixIndex] || [];
     ensureRowLength(sourceRow, correctedHeaders.length);
-    correctedMatrix[excelRowNumber] = sourceRow;
+    correctedMatrix[matrixIndex] = sourceRow;
     const rowMap = {};
     headers.forEach((header, index) => {
       rowMap[header] = row[index] ?? "";
