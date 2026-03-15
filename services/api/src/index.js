@@ -1558,7 +1558,6 @@ async function createRealOmniRequestsForDesktopBatch(batchId, options = {}) {
         PaymentRequired: billing.paymentRequired ? 1 : 0,
         amount: billing.paymentRequired ? billing.billingAmount : "0",
         BiometricRequired: String(process.env.OMNISWITCH_BIOMETRIC_REQUIRED || "1"),
-        IDClienteTrx: firstDoc.id,
       });
       assertOmniSuccess(createdPayload, "omni_request_create_failed");
       const providerRequestId = String(createdPayload.IdSolicitud || createdPayload.IDSolicitud || "").trim();
