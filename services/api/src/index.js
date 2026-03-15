@@ -615,91 +615,70 @@ function extractWorkbookRowsFromBuffer(buffer) {
   return { workbook, firstSheetName, matrix, headers, rows };
 }
 
-function simulateOfficialIdentity(cedula, providedFullName = "") {
-  const digits = String(cedula || "").replace(/\D/g, "");
-  const lastDigit = Number(digits.slice(-1) || 0);
-  const cleanedName = toTitleCase(providedFullName);
-  const fallbackNames = ["Maria Jose", "Carlos Andres", "Ana Sofia", "Jonathan", "Luis Felipe", "Camila"];
-  const fallbackLastNames = ["Paredes Lopez", "Menendez Ruiz", "Solis Villacis", "Ponce Vera", "Rosero Diaz", "Mendoza Arias"];
-  const fallbackFullName = combinePersonName(
-    fallbackNames[Number(digits.slice(-2, -1) || 0) % fallbackNames.length],
-    fallbackLastNames[lastDigit % fallbackLastNames.length]
-  );
+async function fetchQueryRC(cedula) {
+  const auth = {
+    UserName: omniSwitchUser,
+    Password: omniSwitchPassword,
+  };
+  const payload = { Cedula: cedula };
 
-  if (!digits || digits.length < 6) {
+  const response = await fetch(`${omniSwitchApiUrl}/QueryRC`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ ...auth, ...payload }),
+  });
+
+  const raw = await response.text();
+  let parsed;
+  try {
+    parsed = raw ? JSON.parse(raw) : {};
+  } catch {
+    parsed = { raw };
+  }
+  
+  if (!response.ok) {
     return {
       status: "ERROR",
       officialFullName: "",
-      observation: "La fuente externa rechazo la consulta por cedula incompleta.",
+      nombres: "",
+      apellidos: "",
+      profesion: "",
+      estadoCivil: "",
+      nacionalidad: "",
+      fechaNacimiento: "",
+      observation: `Provider HTTP Error ${response.status}`,
     };
   }
 
-  if (lastDigit === 9) {
+  if (parsed.resultCode !== 0) {
     return {
       status: "ERROR",
       officialFullName: "",
-      observation: "La fuente externa no respondio para esta cedula.",
-    };
-  }
-
-  if (lastDigit === 8) {
-    return {
-      status: "REVIEW",
-      officialFullName: fallbackFullName,
-      observation: "La fuente externa devolvio un nombre que requiere revision manual.",
-    };
-  }
-
-  if (lastDigit >= 5 && lastDigit <= 7) {
-    const baseName = cleanedName || fallbackFullName;
-    const split = splitPersonName(baseName);
-    const adjustedLastNames = split.lastNames
-      ? split.lastNames.replace(/\bS\b/i, "Z").replace(/\bS$/, "Z") || split.lastNames
-      : fallbackLastNames[lastDigit % fallbackLastNames.length];
-    return {
-      status: "CORRECTABLE",
-      officialFullName: combinePersonName(split.names || baseName, adjustedLastNames),
-      observation: "La fuente externa encontro una variante corregible en nombres o apellidos.",
+      nombres: "",
+      apellidos: "",
+      profesion: "",
+      estadoCivil: "",
+      nacionalidad: "",
+      fechaNacimiento: "",
+      observation: parsed.resultText || "Error del proveedor.",
     };
   }
 
   return {
     status: "MATCH",
-    officialFullName: cleanedName || fallbackFullName,
-    observation: "La fuente externa devolvio datos consistentes con el Excel.",
+    officialFullName: parsed.Nombre || combinePersonName(parsed.nombres, parsed.apellidos),
+    nombres: parsed.nombres || "",
+    apellidos: parsed.apellidos || "",
+    profesion: parsed.profesion || "",
+    estadoCivil: parsed.estadoCivil || "",
+    nacionalidad: parsed.nacionalidad || "",
+    fechaNacimiento: parsed.fechaNacimiento || "",
+    observation: "Consulta exitosa.",
   };
 }
 
-function compareRcResult({ inputFullName, officialFullName, compareNames, compareLastNames, providerStatus }) {
-  if (providerStatus === "ERROR") return { status: "ERROR", observation: "No fue posible validar esta cedula." };
-  if (providerStatus === "REVIEW") return { status: "REVIEW", observation: "Requiere revision manual antes de corregir." };
 
-  const inputSplit = splitPersonName(inputFullName);
-  const officialSplit = splitPersonName(officialFullName);
-  const namesMatch =
-    !compareNames ||
-    !officialSplit.names ||
-    normalizeComparisonText(inputSplit.names) === normalizeComparisonText(officialSplit.names);
-  const lastNamesMatch =
-    !compareLastNames ||
-    !officialSplit.lastNames ||
-    normalizeComparisonText(inputSplit.lastNames) === normalizeComparisonText(officialSplit.lastNames);
-
-  if (namesMatch && lastNamesMatch) {
-    return { status: "MATCH", observation: "Los datos coinciden con la fuente externa." };
-  }
-
-  const inputFull = normalizeComparisonText(inputFullName);
-  const officialFull = normalizeComparisonText(officialFullName);
-  const similarityHint =
-    inputFull &&
-    officialFull &&
-    (officialFull.includes(inputFull) || inputFull.includes(officialFull) || namesMatch || lastNamesMatch);
-  if (similarityHint) {
-    return { status: "CORRECTABLE", observation: "Se detectaron diferencias corregibles en el nombre oficial." };
-  }
-  return { status: "REVIEW", observation: "La cedula existe pero el nombre amerita revision manual." };
-}
+// Eliminated compareRcResult since we don't compare names anymore.
 
 function isValidEmail(value) {
   const normalized = String(value || "").trim();
@@ -756,16 +735,13 @@ function validateOmniSwitchRow(rowMap) {
   };
 }
 
-function buildRcValidationRun({ workbookBuffer, filename, options = {} }) {
+async function buildRcValidationRun({ workbookBuffer, filename, options = {} }) {
   const { workbook, firstSheetName, matrix, headers, rows } = extractWorkbookRowsFromBuffer(workbookBuffer);
   const columns = detectRcColumns(headers);
   if (columns.cedulaIndex === -1) {
     throw new Error("El Excel no tiene una columna de cedula reconocible.");
   }
 
-  const compareNames = options.compareNames !== false;
-  const compareLastNames = options.compareLastNames !== false;
-  const createCorrectedCopy = options.createCorrectedCopy !== false;
   const results = [];
   let processedCount = 0;
   let matchCount = 0;
@@ -778,10 +754,14 @@ function buildRcValidationRun({ workbookBuffer, filename, options = {} }) {
   if (!correctedMatrix[0]) correctedMatrix[0] = correctedHeaders;
 
   const auditColumnNames = [
-    "nombre_completo_original",
     "nombre_completo_validado",
     "estado_validacion",
     "observacion_validacion",
+    "PrimerNombre_RC",
+    "Apellidos_RC",
+    "Profesion",
+    "EstadoCivil",
+    "Nacionalidad"
   ];
   const auditIndexes = {};
   for (const auditName of auditColumnNames) {
@@ -794,7 +774,8 @@ function buildRcValidationRun({ workbookBuffer, filename, options = {} }) {
     auditIndexes[auditName] = index;
   }
 
-  rows.forEach((row, rowOffset) => {
+  for (let rowOffset = 0; rowOffset < rows.length; rowOffset++) {
+    const row = rows[rowOffset];
     const excelRowNumber = rowOffset + 2;
     const sourceRow = correctedMatrix[excelRowNumber] || [];
     ensureRowLength(sourceRow, correctedHeaders.length);
@@ -805,72 +786,45 @@ function buildRcValidationRun({ workbookBuffer, filename, options = {} }) {
     });
 
     const cedula = String(row[columns.cedulaIndex] || "").trim();
-    const inputNames = [
-      columns.namesIndex >= 0 ? String(row[columns.namesIndex] || "").trim() : "",
-      columns.middleNamesIndex >= 0 ? String(row[columns.middleNamesIndex] || "").trim() : "",
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
-    const inputLastNames = [
-      columns.lastNamesIndex >= 0 ? String(row[columns.lastNamesIndex] || "").trim() : "",
-      columns.secondLastNamesIndex >= 0 ? String(row[columns.secondLastNamesIndex] || "").trim() : "",
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
-    const inputFullName =
-      (columns.fullNameIndex >= 0 ? String(row[columns.fullNameIndex] || "").trim() : "") ||
-      combinePersonName(inputNames, inputLastNames);
-
-    if (!cedula) return;
+    if (!cedula) continue;
 
     processedCount += 1;
-    const providerResult = simulateOfficialIdentity(cedula, inputFullName);
-    const comparison = compareRcResult({
-      inputFullName,
-      officialFullName: providerResult.officialFullName,
-      compareNames,
-      compareLastNames,
-      providerStatus: providerResult.status,
-    });
+    const providerResult = await fetchQueryRC(cedula);
     const omniCheck = validateOmniSwitchRow(rowMap);
 
-    if (comparison.status === "MATCH") matchCount += 1;
-    if (comparison.status === "CORRECTABLE") correctableCount += 1;
-    if (comparison.status === "REVIEW") reviewCount += 1;
-    if (comparison.status === "ERROR") errorCount += 1;
+    if (providerResult.status === "MATCH") matchCount += 1;
+    if (providerResult.status === "ERROR") errorCount += 1;
 
-    const officialSplit = splitPersonName(providerResult.officialFullName);
     const omniSuffix = omniCheck.ready
       ? " OmniSwitch listo."
       : ` OmniSwitch pendiente: ${omniCheck.issues.join(" ")}`;
-    const actionLabel =
-      comparison.status === "CORRECTABLE" && createCorrectedCopy
-        ? `Se actualizara en la copia validada.${omniSuffix}`
-        : comparison.status === "MATCH"
-          ? `Sin cambios.${omniSuffix}`
-          : comparison.status === "REVIEW"
-            ? `Requiere revision manual.${omniSuffix}`
-            : `No se pudo corregir automaticamente.${omniSuffix}`;
-    const combinedObservation = [comparison.observation, omniCheck.ready ? "" : omniCheck.issues.join(" ")]
+      
+    const actionLabel = providerResult.status === "MATCH"
+      ? `Datos inyectados.${omniSuffix}`
+      : `No se obtuvieron datos.${omniSuffix}`;
+
+    const combinedObservation = [providerResult.observation, omniCheck.ready ? "" : omniCheck.issues.join(" ")]
       .filter(Boolean)
       .join(" ");
 
-    sourceRow[auditIndexes.nombre_completo_original] = inputFullName;
     sourceRow[auditIndexes.nombre_completo_validado] = providerResult.officialFullName;
-    sourceRow[auditIndexes.estado_validacion] = comparison.status;
+    sourceRow[auditIndexes.estado_validacion] = providerResult.status;
     sourceRow[auditIndexes.observacion_validacion] = combinedObservation;
+    sourceRow[auditIndexes.PrimerNombre_RC] = providerResult.nombres;
+    sourceRow[auditIndexes.Apellidos_RC] = providerResult.apellidos;
+    sourceRow[auditIndexes.Profesion] = providerResult.profesion;
+    sourceRow[auditIndexes.EstadoCivil] = providerResult.estadoCivil;
+    sourceRow[auditIndexes.Nacionalidad] = providerResult.nacionalidad;
 
-    if (comparison.status === "CORRECTABLE" && createCorrectedCopy) {
+    if (providerResult.status === "MATCH") {
       if (columns.fullNameIndex >= 0) {
         ensureRowLength(sourceRow, columns.fullNameIndex + 1);
         sourceRow[columns.fullNameIndex] = providerResult.officialFullName;
       }
       if (columns.namesIndex >= 0) {
         ensureRowLength(sourceRow, columns.namesIndex + 1);
-        const officialNamesParts = String(officialSplit.names || "").split(/\s+/).filter(Boolean);
-        sourceRow[columns.namesIndex] = officialNamesParts[0] || officialSplit.names;
+        const officialNamesParts = String(providerResult.nombres || "").split(/\s+/).filter(Boolean);
+        sourceRow[columns.namesIndex] = officialNamesParts[0] || providerResult.nombres;
         if (columns.middleNamesIndex >= 0) {
           ensureRowLength(sourceRow, columns.middleNamesIndex + 1);
           sourceRow[columns.middleNamesIndex] = officialNamesParts.slice(1).join(" ");
@@ -878,8 +832,8 @@ function buildRcValidationRun({ workbookBuffer, filename, options = {} }) {
       }
       if (columns.lastNamesIndex >= 0) {
         ensureRowLength(sourceRow, columns.lastNamesIndex + 1);
-        const officialLastNameParts = String(officialSplit.lastNames || "").split(/\s+/).filter(Boolean);
-        sourceRow[columns.lastNamesIndex] = officialLastNameParts[0] || officialSplit.lastNames;
+        const officialLastNameParts = String(providerResult.apellidos || "").split(/\s+/).filter(Boolean);
+        sourceRow[columns.lastNamesIndex] = officialLastNameParts[0] || providerResult.apellidos;
         if (columns.secondLastNamesIndex >= 0) {
           ensureRowLength(sourceRow, columns.secondLastNamesIndex + 1);
           sourceRow[columns.secondLastNamesIndex] = officialLastNameParts.slice(1).join(" ");
@@ -887,19 +841,25 @@ function buildRcValidationRun({ workbookBuffer, filename, options = {} }) {
       }
     }
 
+    // Pass data back locally to the web view for inspection
     results.push({
       rowIndex: rowOffset + 1,
       excelRowNumber,
       cedula,
-      inputFullName,
+      inputFullName: providerResult.officialFullName || "Consultado RC",
       officialFullName: providerResult.officialFullName,
-      status: comparison.status,
+      status: providerResult.status,
       observation: combinedObservation,
       actionLabel,
       omniReady: omniCheck.ready,
       omniIssues: omniCheck.issues,
+      rcData: {
+        profesion: providerResult.profesion,
+        estadoCivil: providerResult.estadoCivil,
+        nacionalidad: providerResult.nacionalidad,
+      }
     });
-  });
+  }
 
   const correctedSheet = XLSX.utils.aoa_to_sheet(correctedMatrix);
   correctedSheet["!cols"] = correctedHeaders.map((header) => ({ wch: Math.max(String(header || "").length + 4, 18) }));
@@ -4217,14 +4177,9 @@ const server = http.createServer((req, res) => {
         const organization = await prisma.organization.findUnique({ where: { id: organizationId } });
         if (!organization) return json(res, 404, { error: "organization_not_found" });
 
-        const run = buildRcValidationRun({
+        const run = await buildRcValidationRun({
           workbookBuffer: file.data,
           filename: file.filename || "archivo.xlsx",
-          options: {
-            compareNames: parseBooleanFlag(fields.compareNames, true),
-            compareLastNames: parseBooleanFlag(fields.compareLastNames, true),
-            createCorrectedCopy: parseBooleanFlag(fields.createCorrectedCopy, true),
-          },
         });
 
         const runId = crypto.randomUUID();
