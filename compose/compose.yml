@@ -54,13 +54,13 @@ services:
       - traefik.enable=true
       - traefik.docker.network=coolify
       - traefik.http.routers.colegios-api.rule=Host(`firma.da-tica.com`) && PathPrefix(`/v1`)
-      - traefik.http.routers.colegios-api.entrypoints=websecure
+      - traefik.http.routers.colegios-api.entrypoints=https
       - traefik.http.routers.colegios-api.tls=true
       - traefik.http.routers.colegios-api.tls.certresolver=letsencrypt
       - traefik.http.routers.colegios-api.priority=100
       - traefik.http.services.colegios-api.loadbalancer.server.port=8080
       - traefik.http.routers.colegios-api-http.rule=Host(`firma.da-tica.com`) && PathPrefix(`/v1`)
-      - traefik.http.routers.colegios-api-http.entrypoints=web
+      - traefik.http.routers.colegios-api-http.entrypoints=http
       - traefik.http.routers.colegios-api-http.middlewares=colegios-redirect
       - traefik.http.middlewares.colegios-redirect.redirectscheme.scheme=https
       - traefik.http.middlewares.colegios-redirect.redirectscheme.permanent=true
@@ -145,13 +145,13 @@ services:
       - traefik.enable=true
       - traefik.docker.network=coolify
       - traefik.http.routers.colegios-web.rule=Host(`firma.da-tica.com`)
-      - traefik.http.routers.colegios-web.entrypoints=websecure
+      - traefik.http.routers.colegios-web.entrypoints=https
       - traefik.http.routers.colegios-web.tls=true
       - traefik.http.routers.colegios-web.tls.certresolver=letsencrypt
       - traefik.http.routers.colegios-web.priority=10
       - traefik.http.services.colegios-web.loadbalancer.server.port=80
       - traefik.http.routers.colegios-web-http.rule=Host(`firma.da-tica.com`)
-      - traefik.http.routers.colegios-web-http.entrypoints=web
+      - traefik.http.routers.colegios-web-http.entrypoints=http
       - traefik.http.routers.colegios-web-http.middlewares=colegios-redirect
     logging: *default-logging
 
