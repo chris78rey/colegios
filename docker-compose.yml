@@ -93,15 +93,14 @@ services:
           memory: 128M
 
   web:
-    image: nginx:1.27-alpine
+    build:
+      context: ./web
     restart: unless-stopped
     mem_limit: 96m
     mem_reservation: 32m
     cpus: 0.25
     depends_on:
       - api
-    volumes:
-      - ./web:/usr/share/nginx/html:ro
     ports:
       - "5173:80"
 
