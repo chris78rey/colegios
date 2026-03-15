@@ -971,10 +971,7 @@ async function omniPost(endpoint, payload) {
   const response = await fetch(`${omniSwitchApiUrl}/${endpoint}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      ...getOmniCredentials(),
-      ...payload,
-    }),
+    body: JSON.stringify(payload),
   });
   const rawText = await response.text();
   let parsed;
@@ -1554,10 +1551,12 @@ async function createRealOmniRequestsForDesktopBatch(batchId, options = {}) {
     let omniRequest = null;
     try {
       const createdPayload = await omniPost("SolicitudeCreate", {
-        IdProcess: getOmniProcessId(options.idProcess),
-        PaymentRequired: billing.paymentRequired ? 1 : 0,
-        amount: billing.paymentRequired ? billing.billingAmount : "0",
-        BiometricRequired: String(process.env.OMNISWITCH_BIOMETRIC_REQUIRED || "1"),
+        UserName: "1709922841",
+        Password: "designerAV2033$$!",
+        IdProcess: 10,
+        PaymentRequired: 1,
+        amount: "1",
+        BiometricRequired: "1",
       });
       assertOmniSuccess(createdPayload, "omni_request_create_failed");
       const providerRequestId = String(createdPayload.IdSolicitud || createdPayload.IDSolicitud || "").trim();
