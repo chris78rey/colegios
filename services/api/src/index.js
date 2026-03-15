@@ -21,7 +21,9 @@ const omniSwitchApiUrl = String(
   process.env.OMNISWITCH_API_URL || process.env.FIRMALO_URL_BASE || "https://wsrest.firmalo.ai/api/v1"
 ).trim().replace(/\/+$/, "");
 const omniSwitchUser = String(process.env.OMNISWITCH_USER || process.env.FIRMALO_USER || "").trim();
-const omniSwitchPassword = String(process.env.OMNISWITCH_PASSWORD || process.env.FIRMALO_PASSWORD || "").trim();
+const omniSwitchPassword = resolveOmniPassword();
+const omniBiometricRequired = normalizeOmniFlag(process.env.OMNISWITCH_BIOMETRIC_REQUIRED || "1");
+const omniDebugEnabled = parseBooleanFlag(process.env.OMNISWITCH_DEBUG, false);
 const omniDefaultCountryId = Number(process.env.OMNISWITCH_DEFAULT_COUNTRY_ID || 19);
 const omniDefaultProvinceId = Number(process.env.OMNISWITCH_DEFAULT_PROVINCE_ID || 17);
 const omniDefaultCityId = Number(process.env.OMNISWITCH_DEFAULT_CITY_ID || 1701);
@@ -927,6 +929,26 @@ function isMockOmniMode() {
   return omniSwitchMode === "mock";
 }
 
+function decodeEnvBase64(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    return Buffer.from(raw, "base64").toString("utf-8").trim();
+  } catch (error) {
+    return "";
+  }
+}
+
+function resolveOmniPassword() {
+  const encoded =
+    process.env.OMNISWITCH_PASSWORD_B64 ||
+    process.env.FIRMALO_PASSWORD_B64 ||
+    "";
+  const decoded = decodeEnvBase64(encoded);
+  if (decoded) return decoded;
+  return String(process.env.OMNISWITCH_PASSWORD || process.env.FIRMALO_PASSWORD || "").trim();
+}
+
 function getOmniCredentials() {
   return {
     UserName: omniSwitchUser,
@@ -966,12 +988,37 @@ function normalizeOmniProviderPayload(payload) {
   return { raw: payload };
 }
 
+function logOmniDebug(event, meta = {}) {
+  if (!omniDebugEnabled) return;
+  console.info(
+    JSON.stringify({
+      ts: new Date().toISOString(),
+      level: "info",
+      service: "api",
+      event,
+      omni: true,
+      ...meta,
+    })
+  );
+}
+
 async function omniPost(endpoint, payload) {
   assertOmniRealConfig();
+  const requestPayload = {
+    ...getOmniCredentials(),
+    ...payload,
+  };
+  logOmniDebug("omni_request", {
+    endpoint,
+    api_url: omniSwitchApiUrl,
+    has_username: !!requestPayload.UserName,
+    has_password: !!requestPayload.Password,
+    password_length: String(requestPayload.Password || "").length,
+  });
   const response = await fetch(`${omniSwitchApiUrl}/${endpoint}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(requestPayload),
   });
   const rawText = await response.text();
   let parsed;
@@ -980,6 +1027,12 @@ async function omniPost(endpoint, payload) {
   } catch {
     parsed = { raw: rawText };
   }
+  logOmniDebug("omni_response", {
+    endpoint,
+    http_status: response.status,
+    result_code: getOmniResultCode(parsed),
+    result_text: getOmniResultText(parsed),
+  });
   if (!response.ok) {
     const error = new Error(`omni_http_${response.status}`);
     error.status = response.status;
@@ -1551,12 +1604,10 @@ async function createRealOmniRequestsForDesktopBatch(batchId, options = {}) {
     let omniRequest = null;
     try {
       const createdPayload = await omniPost("SolicitudeCreate", {
-        UserName: "1709922841",
-        Password: "designerAV2033$$!",
-        IdProcess: 10,
-        PaymentRequired: 1,
-        amount: "1",
-        BiometricRequired: "1",
+        IdProcess: getOmniProcessId(options.idProcess),
+        PaymentRequired: billing.paymentRequired ? 1 : 0,
+        amount: billing.paymentRequired ? billing.billingAmount : "0",
+        BiometricRequired: omniBiometricRequired,
       });
       assertOmniSuccess(createdPayload, "omni_request_create_failed");
       const providerRequestId = String(createdPayload.IdSolicitud || createdPayload.IDSolicitud || "").trim();
