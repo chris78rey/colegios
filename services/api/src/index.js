@@ -1086,10 +1086,16 @@ function findDocByNameFuzzy(documentsByName, targetName) {
 }
 
 function parseOmniStatusPayload(payload) {
-  const root = Array.isArray(payload) ? payload[0] : payload;
+  let root = Array.isArray(payload) ? payload[0] : payload;
   if (!root || typeof root !== "object") {
     return { root: {}, documents: [], signatories: [] };
   }
+
+  // Si viene envuelto en IwiaClientesDataSet (comun en OmniSwitch/Firmalo)
+  if (root.IwiaClientesDataSet && typeof root.IwiaClientesDataSet === "object") {
+    root = root.IwiaClientesDataSet;
+  }
+
   // DEBUG KEYS: ver que trae realmente el objeto
   console.log("[OMNI-DEBUG] Payload root keys:", Object.keys(root));
 
