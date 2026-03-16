@@ -1056,15 +1056,47 @@ function normalizeOmniCollection(value) {
   return [];
 }
 
+function findDocByNameFuzzy(documentsByName, targetName) {
+  const target = String(targetName || "").trim();
+  if (!target) return null;
+  const targetLower = target.toLowerCase();
+  
+  // 1. Exacto
+  if (documentsByName.has(target)) return documentsByName.get(target);
+  
+  // 2. Por entradas (fuzzy)
+  for (const [key, value] of documentsByName.entries()) {
+    const keyLower = String(key || "").trim().toLowerCase();
+    
+    // Coincidencia total ignorando mayusculas
+    if (keyLower === targetLower) return value;
+    
+    // Empieza o termina con el target (ignora prefijos de OmniSwitch)
+    if (keyLower.endsWith(targetLower)) return value;
+    if (targetLower.endsWith(keyLower)) return value;
+    
+    // Match sin extensiones
+    const kNoExt = keyLower.replace(/\.[^/.]+$/, "");
+    const tNoExt = targetLower.replace(/\.[^/.]+$/, "");
+    if (kNoExt !== "" && (kNoExt === tNoExt || kNoExt.endsWith(tNoExt) || tNoExt.endsWith(kNoExt))) {
+      return value;
+    }
+  }
+  return null;
+}
+
 function parseOmniStatusPayload(payload) {
   const root = Array.isArray(payload) ? payload[0] : payload;
   if (!root || typeof root !== "object") {
     return { root: {}, documents: [], signatories: [] };
   }
+  // DEBUG KEYS: ver que trae realmente el objeto
+  console.log("[OMNI-DEBUG] Payload root keys:", Object.keys(root));
+
   return {
     root,
-    documents: normalizeOmniCollection(root.Solicitudes_Documentos || root.Documentos),
-    signatories: normalizeOmniCollection(root.Solicitudes_Firmantes || root.Firmantes),
+    documents: normalizeOmniCollection(root.Solicitudes_Documentos || root.Documentos || root.documentos || []),
+    signatories: normalizeOmniCollection(root.Solicitudes_Firmantes || root.Firmantes || root.firmantes || []),
   };
 }
 
@@ -1518,9 +1550,9 @@ async function processRealOmniRequest(omniRequestId) {
   ));
 
   for (const document of omniRequest.documents || []) {
-    const providerDocument = documentsByName.get(String(document.providerDocumentName || "").trim());
+    const providerDocument = findDocByNameFuzzy(documentsByName, document.providerDocumentName);
     if (!providerDocument) {
-      console.log("[OMNI-POLL] SIN COINCIDENCIA para documento DB:", document.providerDocumentName);
+      console.log("[OMNI-POLL] SIN COINCIDENCIA para documento DB:", document.providerDocumentName, ". Disponibles:", Array.from(documentsByName.keys()));
       continue;
     }
     const signedFlag = normalizeOmniFlag(providerDocument.DocFirmado);
