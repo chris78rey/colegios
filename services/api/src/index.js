@@ -1086,23 +1086,45 @@ function findDocByNameFuzzy(documentsByName, targetName) {
 }
 
 function parseOmniStatusPayload(payload) {
-  let root = Array.isArray(payload) ? payload[0] : payload;
+  const root = Array.isArray(payload) ? payload[0] : payload;
   if (!root || typeof root !== "object") {
     return { root: {}, documents: [], signatories: [] };
   }
 
-  // Si viene envuelto en IwiaClientesDataSet (comun en OmniSwitch/Firmalo)
-  if (root.IwiaClientesDataSet && typeof root.IwiaClientesDataSet === "object") {
-    root = root.IwiaClientesDataSet;
-  }
+  // Busqueda recursiva de las colecciones clave
+  const findCollection = (obj, keys) => {
+    if (!obj || typeof obj !== "object") return null;
+    for (const key of keys) {
+      if (Array.isArray(obj[key])) return obj[key];
+      if (obj[key] && typeof obj[key] === "object") {
+        const nested = findCollection(obj[key], [key]);
+        if (nested) return nested;
+        // Si no es un array pero es un objeto (quiza un solo item)
+        if (!keys.includes(key)) continue; // avoid infinite recursion on same key
+      }
+    }
+    // Busqueda plana en los hijos (por si estan envueltos en IwiaClientesDataSet o similar)
+    for (const k in obj) {
+      if (keys.includes(k) && obj[k]) {
+        return normalizeOmniCollection(obj[k]);
+      }
+      if (obj[k] && typeof obj[k] === "object") {
+        const found = findCollection(obj[k], keys);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
 
-  // DEBUG KEYS: ver que trae realmente el objeto
-  console.log("[OMNI-DEBUG] Payload root keys:", Object.keys(root));
+  const docs = findCollection(root, ["Solicitudes_Documentos", "Documentos", "documentos"]) || [];
+  const signs = findCollection(root, ["Solicitudes_Firmantes", "Firmantes", "firmantes"]) || [];
+
+  console.log("[OMNI-DEBUG] Colecciones encontradas - Docs:", docs.length, "Signs:", signs.length);
 
   return {
     root,
-    documents: normalizeOmniCollection(root.Solicitudes_Documentos || root.Documentos || root.documentos || []),
-    signatories: normalizeOmniCollection(root.Solicitudes_Firmantes || root.Firmantes || root.firmantes || []),
+    documents: docs,
+    signatories: signs,
   };
 }
 
