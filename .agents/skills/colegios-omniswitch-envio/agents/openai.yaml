@@ -1,0 +1,4 @@
+interface:
+  display_name: "Envio OmniSwitch"
+  short_description: "Guia para enviar PDFs por registro via OmniSwitch"
+  default_prompt: "Preparar el envio OmniSwitch por registro para un lote"
